@@ -17,14 +17,14 @@ def search_files(search_string, file_types, verbose):
         else:
             search_text_files(search_string, file_type, verbose)
 
-def verbose(verbose, find_cmd, grep_cmd):
+def verbose_output(verbose, find_cmd, grep_cmd, file_type):
     if verbose:
         print(f"Searching in {file_type} files...")
         print("Executing:", ' '.join(find_cmd))
         print("Executing:", ' '.join(grep_cmd))
 
-def execute_search(verbose, find_cmd, grep_cmd):
-    verbose(verbose, find_cmd, grep_cmd)
+def execute_search(verbose, find_cmd, grep_cmd, file_type):
+    verbose_output(verbose, find_cmd, grep_cmd, file_type)
 
     find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
     grep_proc = subprocess.Popen(grep_cmd, stdin=find_proc.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -37,21 +37,21 @@ def execute_search(verbose, find_cmd, grep_cmd):
     if err:
         print(f"Errors occurred while searching {file_type} files:", err.decode())
 
-
 def search_pdfs(search_string, verbose):
+    file_type = "*.pdf"
     print("Searching in PDF files...")
-    find_cmd = ['find', '.', '-type', 'f', '-name', '*.pdf', '-print0']
+    find_cmd = ['find', '.', '-type', 'f', '-name', file_type, '-print0']
     grep_cmd = ['xargs', '-0', 'pdfgrep', '-H', search_string]
-    execute_search(verbose, find_cmd, grep_cmd)
+    execute_search(verbose, find_cmd, grep_cmd, file_type)
 
 def search_text_files(search_string, file_type, verbose):
     print(f"Searching in {file_type} files...")
     find_cmd = ['find', '.', '-type', 'f', '-name', file_type, '-print0']
     grep_cmd = ['xargs', '-0', 'grep', '-H', search_string]
-    execute_search(verbose, find_cmd, grep_cmd)
-    
+    execute_search(verbose, find_cmd, grep_cmd, file_type)
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Search for a string in PDF and text files.")
+    parser = argparse.ArgumentParser(description="Search for a string in various file types, including PDF and text files.")
     parser.add_argument("search_string", help="The string to search for.")
     parser.add_argument(
         "-t", "--types",
