@@ -2,6 +2,9 @@ import os
 import subprocess
 import sys
 import argparse
+import pytesseract
+from PIL import Image
+from pdf2image import convert_from_path
 
 def verbose_print(verbose, message):
     if verbose:
@@ -14,6 +17,8 @@ def search_files(search_string, file_types, verbose):
     for file_type in file_types:
         if file_type == "*.pdf":
             search_pdfs(search_string, verbose)
+        elif file_type in ["*.jpeg", "*.jpg", "*.png"]:
+            search_images(search_string, file_type, verbose)
         else:
             search_text_files(search_string, file_type, verbose)
 
@@ -50,13 +55,39 @@ def search_text_files(search_string, file_type, verbose):
     grep_cmd = ['xargs', '-0', 'grep', '-H', search_string]
     execute_search(verbose, find_cmd, grep_cmd, file_type)
 
+def search_images(search_string, file_type, verbose):
+    print(f"Searching in {file_type} files with OCR...")
+    find_cmd = ['find', '.', '-type', 'f', '-name', file_type, '-print0']
+
+    if verbose:
+        print("Executing:", ' '.join(find_cmd))
+
+    find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
+    out, err = find_proc.communicate()
+    
+    if out:
+        for file_path in out.decode().split('\0'):
+            if file_path:
+                text = ""
+                if file_path.endswith(".pdf"):
+                    pages = convert_from_path(file_path)
+                    for page in pages:
+                        text += pytesseract.image_to_string(page)
+                else:
+                    text += pytesseract.image_to_string(Image.open(file_path))
+                
+                if search_string in text:
+                    print(f"Found in {file_path}")
+    if err:
+        print(f"Errors occurred while searching {file_type} files:", err.decode())
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Search for a string in various file types, including PDF and text files.")
+    parser = argparse.ArgumentParser(description="Search for a string in various file types, including PDF, text, and image files.")
     parser.add_argument("search_string", help="The string to search for.")
     parser.add_argument(
         "-t", "--types",
         nargs="*",
-        help="Optional list of file types to search in (e.g., *.txt *.md). If not provided, all files will be searched.",
+        help="Optional list of file types to search in (e.g., *.txt *.md *.jpg). If not provided, all files will be searched.",
         default=[]
     )
     parser.add_argument(
