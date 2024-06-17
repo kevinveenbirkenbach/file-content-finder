@@ -10,7 +10,7 @@ def verbose_print(verbose, message):
     if verbose:
         print(message)
 
-def search_files(search_string, file_types, verbose):
+def search_files(search_string, file_types, search_path, verbose):
     if not file_types:
         file_types = [
             '*.md', 
@@ -29,11 +29,11 @@ def search_files(search_string, file_types, verbose):
 
     for file_type in file_types:
         if file_type == "*.pdf":
-            search_pdfs(search_string, verbose)
+            search_pdfs(search_string, search_path, verbose)
         elif file_type in ["*.jpeg", "*.jpg", "*.png"]:
-            search_images(search_string, file_type, verbose)
+            search_images(search_string, file_type, search_path, verbose)
         else:
-            search_text_files(search_string, file_type, verbose)
+            search_text_files(search_string, file_type, search_path, verbose)
 
 def verbose_output(verbose, find_cmd, grep_cmd, file_type):
     if verbose:
@@ -55,22 +55,22 @@ def execute_search(verbose, find_cmd, grep_cmd, file_type):
     if err:
         print(f"Errors occurred while searching {file_type} files:", err.decode())
 
-def search_pdfs(search_string, verbose):
+def search_pdfs(search_string, search_path, verbose):
     file_type = "*.pdf"
     print("Searching in PDF files...")
-    find_cmd = ['find', '.', '-type', 'f', '-name', file_type, '-print0']
+    find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
     grep_cmd = ['xargs', '-0', 'pdfgrep', '-H', search_string]
     execute_search(verbose, find_cmd, grep_cmd, file_type)
 
-def search_text_files(search_string, file_type, verbose):
+def search_text_files(search_string, file_type, search_path, verbose):
     print(f"Searching in {file_type} files...")
-    find_cmd = ['find', '.', '-type', 'f', '-name', file_type, '-print0']
+    find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
     grep_cmd = ['xargs', '-0', 'grep', '-H', search_string]
     execute_search(verbose, find_cmd, grep_cmd, file_type)
 
-def search_images(search_string, file_type, verbose):
+def search_images(search_string, file_type, search_path, verbose):
     print(f"Searching in {file_type} files with OCR...")
-    find_cmd = ['find', '.', '-type', 'f', '-name', file_type, '-print0']
+    find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
 
     if verbose:
         print("Executing:", ' '.join(find_cmd))
@@ -104,6 +104,11 @@ if __name__ == "__main__":
         default=[]
     )
     parser.add_argument(
+        "-p", "--path",
+        help="The path to search in. If not provided, the current directory will be used.",
+        default="."
+    )
+    parser.add_argument(
         "-v", "--verbose",
         action="store_true",
         help="Print the executed commands."
@@ -111,4 +116,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     
-    search_files(args.search_string, args.types, args.verbose)
+    search_files(args.search_string, args.types, args.path, args.verbose)
