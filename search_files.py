@@ -12,7 +12,20 @@ def verbose_print(verbose, message):
 
 def search_files(search_string, file_types, verbose):
     if not file_types:
-        file_types = ['*']  # Search all files if no specific file types are given
+        file_types = [
+            '*.md', 
+            '*.txt', 
+            '*.csv', 
+            '*.log', 
+            '*.json', 
+            '*.xml', 
+            '*.html', 
+            '*.htm', 
+            '*.pdf', 
+            '*.jpeg', 
+            '*.jpg', 
+            '*.png'
+            ]
 
     for file_type in file_types:
         if file_type == "*.pdf":
