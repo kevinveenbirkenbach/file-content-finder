@@ -5,29 +5,33 @@ import argparse
 import pytesseract
 from PIL import Image
 from pdf2image import convert_from_path
+import xlrd
+import fnmatch
 
 def verbose_print(verbose, *messages):
     if verbose:
         print(" ".join(messages))
 
-def find_all_file_types(search_path, skip_extensions):
+def find_all_file_types(search_path, skip_patterns):
     file_types = set()
     for root, _, files in os.walk(search_path):
         for file in files:
             ext = os.path.splitext(file)[1]
-            if ext and ext not in skip_extensions:
+            if ext and not any(fnmatch.fnmatch(ext, pattern) for pattern in skip_patterns):
                 file_types.add(f"*{ext}")
     return list(file_types)
 
-def search_files(search_string, file_types, search_path, verbose, list_only, ignore_errors, skip_extensions, binary_files):
+def search_files(search_string, file_types, search_path, verbose, list_only, ignore_errors, skip_patterns, binary_files):
     if not file_types:
-        file_types = find_all_file_types(search_path, skip_extensions)
+        file_types = find_all_file_types(search_path, skip_patterns)
 
     for file_type in file_types:
         if file_type == "*.pdf":
             search_pdfs(search_string, file_type, search_path, verbose, list_only, ignore_errors)
         elif file_type in ["*.jpeg", "*.jpg", "*.png"]:
             search_images(search_string, file_type, search_path, verbose, list_only, ignore_errors)
+        elif file_type == "*.xls":
+            search_xls_files(search_string, file_type, search_path, verbose, list_only, ignore_errors)
         else:
             search_text_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files)
 
@@ -98,13 +102,39 @@ def search_images(search_string, file_type, search_path, verbose, list_only, ign
                         print(f"Found in {file_path}")
     error_handler(err, ignore_errors, file_type)
 
+def search_xls_files(search_string, file_type, search_path, verbose, list_only, ignore_errors):
+    find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
+    verbose_print(verbose, "Executing:", ' '.join(find_cmd))
+
+    find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
+    out, err = find_proc.communicate()
+    
+    if out:
+        for file_path in out.decode().split('\0'):
+            if file_path:
+                try:
+                    workbook = xlrd.open_workbook(file_path)
+                    for sheet in workbook.sheets():
+                        for row_idx in range(sheet.nrows):
+                            for col_idx in range(sheet.ncols):
+                                cell_value = sheet.cell(row_idx, col_idx).value
+                                if search_string in str(cell_value):
+                                    if list_only:
+                                        print(file_path)
+                                    else:
+                                        print(f"Found in {file_path} (Sheet: {sheet.name}, Row: {row_idx+1}, Col: {col_idx+1})")
+                except Exception as e:
+                    error_handler(str(e), ignore_errors, file_type)
+
+    error_handler(err, ignore_errors, file_type)
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Search for a string in various file types, including PDF, text, and image files.")
+    parser = argparse.ArgumentParser(description="Search for a string in various file types, including PDF, text, image, and xls files.")
     parser.add_argument("search_string", help="The string to search for.")
     parser.add_argument(
         "-t", "--types",
         nargs="*",
-        help="Optional list of file types to search in (e.g., *.txt *.md *.jpg). If not provided, all files will be searched.",
+        help="Optional list of file types to search in (e.g., *.txt *.md *.jpg *.xls). If not provided, all files will be searched.",
         default=[]
     )
     parser.add_argument(
@@ -131,7 +161,19 @@ if __name__ == "__main__":
         "-s", "--skip",
         nargs="*",
         help="Optional list of file extensions to skip (e.g., .zip .tar .gz).",
-        default=['.zip', '.tar', '.gz', '.mp4', '.iso']
+        default=[
+            '.db',
+            '.db-wal',
+            '.gz',
+            '.iso',
+            '.log',
+            '.mp4',
+            '.old',
+            '.sqlite', 
+            '.tar', 
+            '.zip',
+            '.xcf'
+        ]
     )
     parser.add_argument(
         "-b", "--binary-files",
