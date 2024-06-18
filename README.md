@@ -1,12 +1,10 @@
-### README.md
-
 # File Content Finder
 
-This repository contains `search_files.py`, a script to search for a string in various file types, including PDF, text, and image files.
+This repository contains `file-content-finder`, a set of scripts to search for a string in various file types, including PDFs, text files, images, spreadsheets, documents, SQLite databases, and more.
 
 ## Features
 
-- Search for a string in multiple file types: PDF, text, images, Excel files, and more.
+- Search for a string in multiple file types: PDFs, text, images, Excel files, documents, SQLite databases, audio, and video files.
 - Support for case-insensitive search.
 - Option to list only the files containing the search string.
 - Verbose mode to print executed commands.
@@ -59,6 +57,8 @@ pytesseract
 pdf2image
 xlrd
 PyPDF2
+mutagen
+docx
 ```
 
 To install the Python dependencies using `pip`, run:
@@ -120,7 +120,7 @@ Search for the string "example" and ignore any errors encountered:
 python search_files.py "example" -i
 ```
 
-### Setup
+## Setup
 
 To install the required Python packages, run:
 
@@ -141,4 +141,3 @@ This project is licensed under the GNU Affero General Public License, Version 3,
 ## AI Assistance
 
 This code was generated with the help of AI. For more details, refer to this [chat conversation with ChatGPT](https://chatgpt.com/share/7eae44ac-d4c0-4978-9e8e-bfa85dcc4b75).
-
