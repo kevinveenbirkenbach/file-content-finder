@@ -11,6 +11,7 @@ import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import partial
 import docx
+import sqlite3
 
 def verbose_print(verbose, *messages):
     if verbose:
@@ -40,6 +41,7 @@ def search_files(search_string, file_types, search_path, verbose, list_only, ign
         "*.xls": search_xls_files,
         "*.odp": search_odp_files,
         "*.doc": search_doc_files,
+        "*.sqlite": search_sqlite_files,
     }
 
     for file_type in file_types:
@@ -168,6 +170,35 @@ def search_doc_files(search_string, file_type, search_path, verbose, list_only, 
     find_cmd = ['find', search_path, '-type', 'f', '-iname', file_type, '-print0']
     process_files_in_parallel(find_cmd, process_doc, search_string, verbose, list_only, ignore_errors)
 
+def process_sqlite(file_path, search_string, verbose, list_only, ignore_errors, binary_files=None):
+    try:
+        conn = sqlite3.connect(file_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
+        for table_name in tables:
+            table_name = table_name[0]
+            cursor.execute(f"PRAGMA table_info({table_name});")
+            columns = cursor.fetchall()
+            column_names = [column[1] for column in columns]
+            for column in column_names:
+                cursor.execute(f"SELECT * FROM {table_name} WHERE {column} LIKE ?", ('%' + search_string + '%',))
+                rows = cursor.fetchall()
+                if rows:
+                    if list_only:
+                        print(file_path)
+                    else:
+                        print(f"Found in {file_path} in table {table_name}, column {column}")
+                    return None
+        conn.close()
+    except Exception as e:
+        error_handler(list_only, str(e), ignore_errors, file_path)
+    return None
+
+def search_sqlite_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
+    find_cmd = ['find', search_path, '-type', 'f', '-iname', file_type, '-print0']
+    process_files_in_parallel(find_cmd, process_sqlite, search_string, verbose, list_only, ignore_errors)
+
 def process_odp(file_path, search_string, verbose, list_only, ignore_errors, binary_files=None):
     try:
         with zipfile.ZipFile(file_path, 'r') as odp:
@@ -220,7 +251,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-t", "--types",
         nargs="*",
-        help="Optional list of file types to search in (e.g., *.txt *.md *.jpg *.xls *.odp *.doc). If not provided, all files will be searched.",
+        help="Optional list of file types to search in (e.g., *.txt, *.md, *.jpg, *.xls, *.odp, *.doc, *.sqlite). If not provided, all files will be searched.",
         default=[]
     )
     parser.add_argument(
@@ -246,7 +277,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-s", "--skip",
         nargs="*",
-        help="Optional list of file extensions to skip (e.g., .zip .tar .gz).",
+        help="Optional list of file extensions to skip (e.g., .zip, .tar, .gz).",
         default=[]
     )
     parser.add_argument(
@@ -270,13 +301,12 @@ if __name__ == "__main__":
         '.iso',
         '.ldb',
         '.log',
+        '.mp3',
         '.mp4',
         '.old',
-        '.sqlite', 
         '.tar', 
         '.zip',
-        '.xcf',
-        '.doc'
+        '.xcf'
     ]
 
     if args.add:
