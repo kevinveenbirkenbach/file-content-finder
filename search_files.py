@@ -19,24 +19,30 @@ def find_all_file_types(search_path):
                 file_types.add(f"*{ext}")
     return list(file_types)
 
-def search_files(search_string, file_types, search_path, verbose, list_only):
+def search_files(search_string, file_types, search_path, verbose, list_only, ignore_errors):
     if not file_types:
         file_types = find_all_file_types(search_path)
 
     for file_type in file_types:
         if file_type == "*.pdf":
-            search_pdfs(search_string, file_type, search_path, verbose, list_only)
+            search_pdfs(search_string, file_type, search_path, verbose, list_only, ignore_errors)
         elif file_type in ["*.jpeg", "*.jpg", "*.png"]:
-            search_images(search_string, file_type, search_path, verbose, list_only)
+            search_images(search_string, file_type, search_path, verbose, list_only, ignore_errors)
         else:
-            search_text_files(search_string, file_type, search_path, verbose, list_only)
+            search_text_files(search_string, file_type, search_path, verbose, list_only, ignore_errors)
 
 def verbose_output(verbose, find_cmd, grep_cmd, file_type):
     verbose_print(verbose, f"Searching in {file_type} files...")
     verbose_print(verbose, "Executing:", ' '.join(find_cmd))
     verbose_print(verbose, "Executing:", ' '.join(grep_cmd))
 
-def execute_search(verbose, find_cmd, grep_cmd, file_type, list_only):
+def error_handler(err, ignore_errors, file_type):
+    if err:
+        print(f"Errors occurred while searching {file_type} files:", err.decode(), file=sys.stderr)
+        if not ignore_errors:
+            sys.exit(1)
+
+def execute_search(verbose, find_cmd, grep_cmd, file_type, list_only, ignore_errors):
     verbose_output(verbose, find_cmd, grep_cmd, file_type)
 
     find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
@@ -53,20 +59,19 @@ def execute_search(verbose, find_cmd, grep_cmd, file_type, list_only):
                 print(file)
         else:
             print(out.decode())
-    if err:
-        print(f"Errors occurred while searching {file_type} files:", err.decode())
+    error_handler(err, ignore_errors, file_type)
 
-def search_pdfs(search_string, file_type, search_path, verbose, list_only):
+def search_pdfs(search_string, file_type, search_path, verbose, list_only, ignore_errors):
     find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
     grep_cmd = ['xargs', '-0', 'pdfgrep', '-H', search_string]
-    execute_search(verbose, find_cmd, grep_cmd, file_type, list_only)
+    execute_search(verbose, find_cmd, grep_cmd, file_type, list_only, ignore_errors)
 
-def search_text_files(search_string, file_type, search_path, verbose, list_only):
+def search_text_files(search_string, file_type, search_path, verbose, list_only, ignore_errors):
     find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
     grep_cmd = ['xargs', '-0', 'grep', '-H', search_string]
-    execute_search(verbose, find_cmd, grep_cmd, file_type, list_only)
+    execute_search(verbose, find_cmd, grep_cmd, file_type, list_only, ignore_errors)
 
-def search_images(search_string, file_type, search_path, verbose, list_only):
+def search_images(search_string, file_type, search_path, verbose, list_only, ignore_errors):
     find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
     verbose_print(verbose, "Executing:", ' '.join(find_cmd))
 
@@ -89,8 +94,7 @@ def search_images(search_string, file_type, search_path, verbose, list_only):
                         print(file_path)
                     else:
                         print(f"Found in {file_path}")
-    if err:
-        print(f"Errors occurred while searching {file_type} files:", err.decode())
+    error_handler(err, ignore_errors, file_type)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Search for a string in various file types, including PDF, text, and image files.")
@@ -116,7 +120,12 @@ if __name__ == "__main__":
         action="store_true",
         help="Only list files containing the search string, without additional information."
     )
+    parser.add_argument(
+        "-i", "--ignore",
+        action="store_true",
+        help="Ignore errors and continue searching."
+    )
 
     args = parser.parse_args()
     
-    search_files(args.search_string, args.types, args.path, args.verbose, args.list)
+    search_files(args.search_string, args.types, args.path, args.verbose, args.list, args.ignore)
