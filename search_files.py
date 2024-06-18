@@ -10,6 +10,7 @@ import fnmatch
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import partial
+import docx
 
 def verbose_print(verbose, *messages):
     if verbose:
@@ -38,6 +39,7 @@ def search_files(search_string, file_types, search_path, verbose, list_only, ign
         "*.png": search_images,
         "*.xls": search_xls_files,
         "*.odp": search_odp_files,
+        "*.doc": search_doc_files,
     }
 
     for file_type in file_types:
@@ -146,6 +148,26 @@ def search_xls_files(search_string, file_type, search_path, verbose, list_only, 
     find_cmd = ['find', search_path, '-type', 'f', '-iname', file_type, '-print0']
     process_files_in_parallel(find_cmd, process_xls, search_string, verbose, list_only, ignore_errors)
 
+def process_doc(file_path, search_string, verbose, list_only, ignore_errors, binary_files=None):
+    try:
+        doc = docx.Document(file_path)
+        text = ""
+        for para in doc.paragraphs:
+            text += para.text
+        if search_string in text:
+            if list_only:
+                print(file_path)
+            else:
+                print(f"Found in {file_path}")
+        return None
+    except Exception as e:
+        error_handler(list_only, str(e), ignore_errors, file_path)
+    return None
+
+def search_doc_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
+    find_cmd = ['find', search_path, '-type', 'f', '-iname', file_type, '-print0']
+    process_files_in_parallel(find_cmd, process_doc, search_string, verbose, list_only, ignore_errors)
+
 def process_odp(file_path, search_string, verbose, list_only, ignore_errors, binary_files=None):
     try:
         with zipfile.ZipFile(file_path, 'r') as odp:
@@ -193,12 +215,12 @@ def process_files_in_parallel(find_cmd, process_func, search_string, verbose, li
                 raise
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Search for a string in various file types, including PDF, text, image, xls, and odp files.")
+    parser = argparse.ArgumentParser(description="Search for a string in various file types, including PDF, text, image, xls, doc, and odp files.")
     parser.add_argument("search_string", help="The string to search for.")
     parser.add_argument(
         "-t", "--types",
         nargs="*",
-        help="Optional list of file types to search in (e.g., *.txt *.md *.jpg *.xls *.odp). If not provided, all files will be searched.",
+        help="Optional list of file types to search in (e.g., *.txt *.md *.jpg *.xls *.odp *.doc). If not provided, all files will be searched.",
         default=[]
     )
     parser.add_argument(
