@@ -9,6 +9,7 @@ import xlrd
 import fnmatch
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import partial
 
 def verbose_print(verbose, *messages):
     if verbose:
@@ -26,42 +27,45 @@ def find_all_file_types(search_path, skip_patterns):
 def search_files(search_string, file_types, search_path, verbose, list_only, ignore_errors, skip_patterns, binary_files):
     if not file_types:
         file_types = find_all_file_types(search_path, skip_patterns)
+    
+    dispatch = {
+        "*.pdf": search_pdfs,
+        "*.jpeg": search_images,
+        "*.jpg": search_images,
+        "*.png": search_images,
+        "*.xls": search_xls_files,
+        "*.odp": search_odp_files,
+    }
 
     for file_type in file_types:
         verbose_print(verbose, f"Searching in {file_type} files...")
-        if file_type == "*.pdf":
-            search_pdfs(search_string, file_type, search_path, verbose, list_only, ignore_errors)
-        elif file_type in ["*.jpeg", "*.jpg", "*.png"]:
-            search_images(search_string, file_type, search_path, verbose, list_only, ignore_errors)
-        elif file_type == "*.xls":
-            search_xls_files(search_string, file_type, search_path, verbose, list_only, ignore_errors)
-        elif file_type == "*.odp":
-            search_odp_files(search_string, file_type, search_path, verbose, list_only, ignore_errors)
-        else:
-            search_text_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files)    
+        search_function = dispatch.get(file_type, search_text_files)
+        search_function(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files)
 
 def error_handler(err, ignore_errors, file_type, file_path=None):
     if err:
+        message = f"Errors occurred while searching {file_type} files"
         if file_path:
-            print(f"Errors occurred while searching {file_type} files: {file_path}", file=sys.stderr)
+            message += f": {file_path}"
         else:
-            print(f"Errors occurred while searching {file_type} files:", err.decode(), file=sys.stderr)
+            message += f": {err.decode()}"
+        print(message, file=sys.stderr)
         if not ignore_errors:
             sys.exit(1)
 
-def execute_search(cmd, file_type, verbose, list_only, ignore_errors):
+def execute_search(cmd, verbose, list_only, ignore_errors, file_type=None):
     verbose_print(verbose, "Executing:", ' '.join(cmd))
 
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate()
-    
+
     if out:
         try:
             output = out.decode()
         except UnicodeDecodeError as e:
             error_handler(str(e), ignore_errors, file_type, cmd[-1])
             sys.exit(1)
-        
+
         if list_only:
             results = output.strip().split('\n')
             files_found = set(result.split(':')[0] for result in results)
@@ -69,50 +73,28 @@ def execute_search(cmd, file_type, verbose, list_only, ignore_errors):
                 print(file)
         else:
             print(output)
-    
+
     error_handler(err, ignore_errors, file_type)
 
-def search_pdfs(search_string, file_type, search_path, verbose, list_only, ignore_errors):
+def search_pdfs(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
     find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
+    process_files_in_parallel(find_cmd, process_pdf, search_string, verbose, list_only, ignore_errors, binary_files)
 
-    find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
-    out, err = find_proc.communicate()
-
-    if out:
-        file_paths = out.decode().split('\0')
-        with ThreadPoolExecutor() as executor:
-            futures = {executor.submit(process_pdf, file_path, search_string, verbose, list_only, ignore_errors): file_path for file_path in file_paths if file_path}
-            for future in as_completed(futures):
-                future.result()
-    
-    error_handler(err, ignore_errors, file_type)
-
-def process_pdf(file_path, search_string, verbose, list_only, ignore_errors):
+def process_pdf(file_path, search_string, verbose, list_only, ignore_errors, binary_files):
     grep_cmd = ['pdfgrep', '-H', search_string, file_path]
-    execute_search(grep_cmd, "*.pdf", verbose, list_only, ignore_errors)
+    execute_search(grep_cmd, verbose, list_only, ignore_errors, "*.pdf")
 
 def search_text_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files):
     find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
-    
-    find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
-    out, err = find_proc.communicate()
-
-    if out:
-        file_paths = out.decode().split('\0')
-        with ThreadPoolExecutor() as executor:
-            futures = {executor.submit(process_text_file, file_path, search_string, verbose, list_only, ignore_errors, binary_files): file_path for file_path in file_paths if file_path}
-            for future in as_completed(futures):
-                future.result()
-    
-    error_handler(err, ignore_errors, file_type)
+    process_files_in_parallel(find_cmd, process_text_file, search_string, verbose, list_only, ignore_errors, binary_files=binary_files)
 
 def process_text_file(file_path, search_string, verbose, list_only, ignore_errors, binary_files):
     grep_cmd = ['grep', '-H', search_string, file_path]
     if binary_files:
         grep_cmd.insert(2, '--binary-files=text')
-    execute_search(grep_cmd, "*.txt", verbose, list_only, ignore_errors)
+    execute_search(grep_cmd, verbose, list_only, ignore_errors, "*.txt")
 
-def process_image(file_path, search_string):
+def process_image(file_path, search_string, verbose, list_only, ignore_errors, binary_files):
     text = ""
     if file_path.endswith(".pdf"):
         pages = convert_from_path(file_path)
@@ -120,33 +102,19 @@ def process_image(file_path, search_string):
             text += pytesseract.image_to_string(page)
     else:
         text += pytesseract.image_to_string(Image.open(file_path))
-    
+
     if search_string in text:
-        return file_path
+        if list_only:
+            print(file_path)
+        else:
+            print(f"Found in {file_path}")
     return None
 
-def search_images(search_string, file_type, search_path, verbose, list_only, ignore_errors):
+def search_images(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
     find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
-    verbose_print(verbose, "Executing:", ' '.join(find_cmd))
+    process_files_in_parallel(find_cmd, process_image, search_string, verbose, list_only, ignore_errors)
 
-    find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
-    out, err = find_proc.communicate()
-
-    if out:
-        file_paths = out.decode().split('\0')
-        with ThreadPoolExecutor() as executor:
-            futures = {executor.submit(process_image, file_path, search_string): file_path for file_path in file_paths if file_path}
-            for future in as_completed(futures):
-                result = future.result()
-                if result:
-                    if list_only:
-                        print(result)
-                    else:
-                        print(f"Found in {result}")
-    
-    error_handler(err, ignore_errors, file_type)
-
-def process_xls(file_path, search_string):
+def process_xls(file_path, search_string, verbose, list_only, ignore_errors, binary_files=None):
     try:
         workbook = xlrd.open_workbook(file_path)
         for sheet in workbook.sheets():
@@ -154,36 +122,20 @@ def process_xls(file_path, search_string):
                 for col_idx in range(sheet.ncols):
                     cell_value = sheet.cell(row_idx, col_idx).value
                     if search_string in str(cell_value):
+                        if list_only:
+                            print(file_path)
+                        else:
+                            print(f"Found in {file_path}")
                         return file_path
     except Exception as e:
         return str(e)
     return None
 
-def search_xls_files(search_string, file_type, search_path, verbose, list_only, ignore_errors):
+def search_xls_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
     find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
-    verbose_print(verbose, "Executing:", ' '.join(find_cmd))
+    process_files_in_parallel(find_cmd, process_xls, search_string, verbose, list_only, ignore_errors)
 
-    find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
-    out, err = find_proc.communicate()
-
-    if out:
-        file_paths = out.decode().split('\0')
-        with ThreadPoolExecutor() as executor:
-            futures = {executor.submit(process_xls, file_path, search_string): file_path for file_path in file_paths if file_path}
-            for future in as_completed(futures):
-                result = future.result()
-                if result:
-                    if isinstance(result, str) and "error" in result.lower():
-                        error_handler(result, ignore_errors, file_type, file_path)
-                    elif result:
-                        if list_only:
-                            print(result)
-                        else:
-                            print(f"Found in {result}")
-    
-    error_handler(err, ignore_errors, file_type)
-
-def process_odp(file_path, search_string):
+def process_odp(file_path, search_string, verbose, list_only, ignore_errors, binary_files=None):
     try:
         with zipfile.ZipFile(file_path, 'r') as odp:
             for entry in odp.namelist():
@@ -191,34 +143,37 @@ def process_odp(file_path, search_string):
                     with odp.open(entry) as xml_file:
                         content = xml_file.read().decode('utf-8')
                         if search_string in content:
+                            if list_only:
+                                print(file_path)
+                            else:
+                                print(f"Found in {file_path}")
                             return file_path
     except Exception as e:
         return str(e)
     return None
 
-def search_odp_files(search_string, file_type, search_path, verbose, list_only, ignore_errors):
+def search_odp_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
     find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
-    verbose_print(verbose, "Executing:", ' '.join(find_cmd))
+    process_files_in_parallel(find_cmd, process_odp, search_string, verbose, list_only, ignore_errors)
 
+def process_files_in_parallel(find_cmd, process_func, search_string, verbose, list_only, ignore_errors, binary_files=None):
     find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
     out, err = find_proc.communicate()
 
     if out:
         file_paths = out.decode().split('\0')
         with ThreadPoolExecutor() as executor:
-            futures = {executor.submit(process_odp, file_path, search_string): file_path for file_path in file_paths if file_path}
+            futures = {executor.submit(partial(process_func, file_path, search_string, verbose, list_only, ignore_errors, binary_files)): file_path for file_path in file_paths if file_path}
             for future in as_completed(futures):
                 result = future.result()
                 if result:
                     if isinstance(result, str) and "error" in result.lower():
-                        error_handler(result, ignore_errors, file_type, file_path)
+                        error_handler(result, ignore_errors, process_func.__name__, result)
                     elif result:
                         if list_only:
                             print(result)
                         else:
                             print(f"Found in {result}")
-    
-    error_handler(err, ignore_errors, file_type)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Search for a string in various file types, including PDF, text, image, xls, and odp files.")
@@ -267,6 +222,8 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
+
 
     default_skip = [
         '.db',
