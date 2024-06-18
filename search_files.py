@@ -19,24 +19,24 @@ def find_all_file_types(search_path):
                 file_types.add(f"*{ext}")
     return list(file_types)
 
-def search_files(search_string, file_types, search_path, verbose):
+def search_files(search_string, file_types, search_path, verbose, list_only):
     if not file_types:
         file_types = find_all_file_types(search_path)
 
     for file_type in file_types:
         if file_type == "*.pdf":
-            search_pdfs(search_string, search_path, verbose)
+            search_pdfs(search_string, file_type, search_path, verbose, list_only)
         elif file_type in ["*.jpeg", "*.jpg", "*.png"]:
-            search_images(search_string, file_type, search_path, verbose)
+            search_images(search_string, file_type, search_path, verbose, list_only)
         else:
-            search_text_files(search_string, file_type, search_path, verbose)
+            search_text_files(search_string, file_type, search_path, verbose, list_only)
 
 def verbose_output(verbose, find_cmd, grep_cmd, file_type):
-    verbose_print(verbose,f"Searching in {file_type} files...")
-    verbose_print(verbose,"Executing:", ' '.join(find_cmd))
-    verbose_print(verbose,"Executing:", ' '.join(grep_cmd))
+    verbose_print(verbose, f"Searching in {file_type} files...")
+    verbose_print(verbose, "Executing:", ' '.join(find_cmd))
+    verbose_print(verbose, "Executing:", ' '.join(grep_cmd))
 
-def execute_search(verbose, find_cmd, grep_cmd, file_type):
+def execute_search(verbose, find_cmd, grep_cmd, file_type, list_only):
     verbose_output(verbose, find_cmd, grep_cmd, file_type)
 
     find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
@@ -46,27 +46,29 @@ def execute_search(verbose, find_cmd, grep_cmd, file_type):
     out, err = grep_proc.communicate()
     
     if out:
-        print(out.decode())
+        if list_only:
+            results = out.decode().strip().split('\n')
+            files_found = set(result.split(':')[0] for result in results)
+            for file in files_found:
+                print(file)
+        else:
+            print(out.decode())
     if err:
         print(f"Errors occurred while searching {file_type} files:", err.decode())
 
-def search_pdfs(search_string, search_path, verbose):
-    file_type = "*.pdf"
-    print("Searching in PDF files...")
+def search_pdfs(search_string, file_type, search_path, verbose, list_only):
     find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
     grep_cmd = ['xargs', '-0', 'pdfgrep', '-H', search_string]
-    execute_search(verbose, find_cmd, grep_cmd, file_type)
+    execute_search(verbose, find_cmd, grep_cmd, file_type, list_only)
 
-def search_text_files(search_string, file_type, search_path, verbose):
-    print(f"Searching in {file_type} files...")
+def search_text_files(search_string, file_type, search_path, verbose, list_only):
     find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
     grep_cmd = ['xargs', '-0', 'grep', '-H', search_string]
-    execute_search(verbose, find_cmd, grep_cmd, file_type)
+    execute_search(verbose, find_cmd, grep_cmd, file_type, list_only)
 
-def search_images(search_string, file_type, search_path, verbose):
-    print(f"Searching in {file_type} files with OCR...")
+def search_images(search_string, file_type, search_path, verbose, list_only):
     find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
-    verbose_print(verbose,"Executing:", ' '.join(find_cmd))
+    verbose_print(verbose, "Executing:", ' '.join(find_cmd))
 
     find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
     out, err = find_proc.communicate()
@@ -83,7 +85,10 @@ def search_images(search_string, file_type, search_path, verbose):
                     text += pytesseract.image_to_string(Image.open(file_path))
                 
                 if search_string in text:
-                    print(f"Found in {file_path}")
+                    if list_only:
+                        print(file_path)
+                    else:
+                        print(f"Found in {file_path}")
     if err:
         print(f"Errors occurred while searching {file_type} files:", err.decode())
 
@@ -106,7 +111,12 @@ if __name__ == "__main__":
         action="store_true",
         help="Print the executed commands."
     )
+    parser.add_argument(
+        "-l", "--list",
+        action="store_true",
+        help="Only list files containing the search string, without additional information."
+    )
 
     args = parser.parse_args()
     
-    search_files(args.search_string, args.types, args.path, args.verbose)
+    search_files(args.search_string, args.types, args.path, args.verbose, args.list)
