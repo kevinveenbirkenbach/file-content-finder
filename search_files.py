@@ -6,9 +6,9 @@ import pytesseract
 from PIL import Image
 from pdf2image import convert_from_path
 
-def verbose_print(verbose, message):
+def verbose_print(verbose, *messages):
     if verbose:
-        print(message)
+        print(" ".join(messages))
 
 def find_all_file_types(search_path):
     file_types = set()
