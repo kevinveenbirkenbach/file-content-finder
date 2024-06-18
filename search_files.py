@@ -10,18 +10,18 @@ def verbose_print(verbose, *messages):
     if verbose:
         print(" ".join(messages))
 
-def find_all_file_types(search_path):
+def find_all_file_types(search_path, skip_extensions):
     file_types = set()
     for root, _, files in os.walk(search_path):
         for file in files:
             ext = os.path.splitext(file)[1]
-            if ext:
+            if ext and ext not in skip_extensions:
                 file_types.add(f"*{ext}")
     return list(file_types)
 
-def search_files(search_string, file_types, search_path, verbose, list_only, ignore_errors):
+def search_files(search_string, file_types, search_path, verbose, list_only, ignore_errors, skip_extensions):
     if not file_types:
-        file_types = find_all_file_types(search_path)
+        file_types = find_all_file_types(search_path, skip_extensions)
 
     for file_type in file_types:
         if file_type == "*.pdf":
@@ -125,7 +125,13 @@ if __name__ == "__main__":
         action="store_true",
         help="Ignore errors and continue searching."
     )
+    parser.add_argument(
+        "-s", "--skip",
+        nargs="*",
+        help="Optional list of file extensions to skip (e.g., .zip .tar .gz).",
+        default=['.zip', '.tar', '.gz', '.mp4']
+    )
 
     args = parser.parse_args()
     
-    search_files(args.search_string, args.types, args.path, args.verbose, args.list, args.ignore)
+    search_files(args.search_string, args.types, args.path, args.verbose, args.list, args.ignore, args.skip)
