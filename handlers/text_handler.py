@@ -1,3 +1,4 @@
+# text_handler.py
 from .base_handler import BaseHandler
 
 class TextHandler(BaseHandler):
@@ -6,7 +7,11 @@ class TextHandler(BaseHandler):
         self.process_files_in_parallel(find_cmd, self.process_text_file)
 
     def process_text_file(self, file_path):
-        grep_cmd = ['grep', '-H', self.search_string, file_path]
-        if self.binary_files:
-            grep_cmd.insert(2, '--binary-files=text')
-        self.execute_search(grep_cmd, file_path)
+        for search_string in self.search_strings:
+            grep_cmd = ['grep', '-H']
+            if not self.case_sensitive:
+                grep_cmd.append('-i')
+            grep_cmd.extend([search_string, file_path])
+            if self.binary_files:
+                grep_cmd.insert(2, '--binary-files=text')
+            self.execute_search(grep_cmd, file_path)

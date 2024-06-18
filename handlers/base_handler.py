@@ -1,16 +1,18 @@
+# base_handler.py
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import partial
 
 class BaseHandler:
-    def __init__(self, search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
-        self.search_string = search_string
+    def __init__(self, search_strings, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None, case_sensitive=False):
+        self.search_strings = search_strings
         self.file_type = file_type
         self.search_path = search_path
         self.verbose = verbose
         self.list_only = list_only
         self.ignore_errors = ignore_errors
         self.binary_files = binary_files
+        self.case_sensitive = case_sensitive
 
     def verbose_print(self, *messages):
         if self.verbose:

@@ -1,3 +1,4 @@
+# doc_handler.py
 import docx
 from .base_handler import BaseHandler
 from utils import SearchUtils
@@ -13,6 +14,7 @@ class DocHandler(BaseHandler):
             text = ""
             for para in doc.paragraphs:
                 text += para.text
-            SearchUtils.handle_search_result(self.search_string, text, file_path, self.list_only)
+            for search_string in self.search_strings:
+                SearchUtils.handle_search_result(search_string, text, file_path, self.list_only)
         except Exception as e:
             self.error_handler(str(e), file_path)

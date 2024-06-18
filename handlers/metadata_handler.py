@@ -1,3 +1,4 @@
+# metadata_handler.py
 import subprocess
 from .base_handler import BaseHandler
 from utils import SearchUtils
@@ -11,6 +12,7 @@ class MetadataHandler(BaseHandler):
         try:
             metadata = subprocess.check_output(['exiftool', file_path], universal_newlines=False)
             metadata = metadata.decode('utf-8', errors='ignore')
-            SearchUtils.handle_search_result(self.search_string, metadata, file_path, self.list_only, f"Found in metadata of {file_path}")
+            for search_string in self.search_strings:
+                SearchUtils.handle_search_result(search_string, metadata, file_path, self.list_only, f"Found in metadata of {file_path}")
         except Exception as e:
             self.error_handler(str(e), file_path)

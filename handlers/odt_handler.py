@@ -1,4 +1,4 @@
-# handlers/odt_handler.py
+# odt_handler.py
 import zipfile
 from xml.etree import ElementTree as ET
 from .base_handler import BaseHandler
@@ -11,11 +11,11 @@ class ODTHandler(BaseHandler):
 
     def process_odt(self, file_path):
         if not self.is_zipfile(file_path):
-            # Try to read the file as plain text if it's not a zip file
             try:
                 with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                     content = f.read()
-                    SearchUtils.handle_search_result(self.search_string, content, file_path, self.list_only)
+                    for search_string in self.search_strings:
+                        SearchUtils.handle_search_result(search_string, content, file_path, self.list_only)
             except Exception as e:
                 self.error_handler(str(e), file_path)
             return
@@ -27,7 +27,8 @@ class ODTHandler(BaseHandler):
                         with odt.open(entry) as xml_file:
                             content = xml_file.read().decode('utf-8', errors='ignore')
                             text = self.extract_text_from_odt(content)
-                            SearchUtils.handle_search_result(self.search_string, text, file_path, self.list_only)
+                            for search_string in self.search_strings:
+                                SearchUtils.handle_search_result(search_string, text, file_path, self.list_only)
         except Exception as e:
             self.error_handler(str(e), file_path)
 

@@ -1,4 +1,4 @@
-# handlers/pptx_handler.py
+# pptx_handler.py
 from pptx import Presentation
 from .base_handler import BaseHandler
 from utils import SearchUtils
@@ -16,6 +16,7 @@ class PPTXHandler(BaseHandler):
                 for shape in slide.shapes:
                     if hasattr(shape, "text"):
                         text += shape.text
-            SearchUtils.handle_search_result(self.search_string, text, file_path, self.list_only)
+            for search_string in self.search_strings:
+                SearchUtils.handle_search_result(search_string, text, file_path, self.list_only)
         except Exception as e:
             self.error_handler(str(e), file_path)

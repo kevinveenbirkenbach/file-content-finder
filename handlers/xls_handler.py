@@ -1,3 +1,4 @@
+# xls_handler.py
 import xlrd
 from .base_handler import BaseHandler
 from utils import SearchUtils
@@ -14,6 +15,7 @@ class XLSHandler(BaseHandler):
                 for row_idx in range(sheet.nrows):
                     for col_idx in range(sheet.ncols):
                         cell_value = sheet.cell(row_idx, col_idx).value
-                        SearchUtils.handle_search_result(self.search_string, str(cell_value), file_path, self.list_only)
+                        for search_string in self.search_strings:
+                            SearchUtils.handle_search_result(search_string, str(cell_value), file_path, self.list_only)
         except Exception as e:
             self.error_handler(str(e), file_path)

@@ -1,3 +1,4 @@
+# searcher.py
 import os
 import fnmatch
 from handlers.pdf_handler import PDFHandler
@@ -12,8 +13,8 @@ from handlers.pptx_handler import PPTXHandler
 from handlers.odt_handler import ODTHandler 
 
 class Searcher:
-    def __init__(self, search_string, file_types, search_path, verbose, list_only, ignore_errors, skip_patterns, binary_files):
-        self.search_string = search_string
+    def __init__(self, search_strings, file_types, search_path, verbose, list_only, ignore_errors, skip_patterns, binary_files, case_sensitive):
+        self.search_strings = search_strings
         self.file_types = file_types
         self.search_path = search_path
         self.verbose = verbose
@@ -21,6 +22,7 @@ class Searcher:
         self.ignore_errors = ignore_errors
         self.skip_patterns = skip_patterns
         self.binary_files = binary_files
+        self.case_sensitive = case_sensitive
 
     def verbose_print(self, *messages):
         if self.verbose:
@@ -66,5 +68,5 @@ class Searcher:
             normalized_file_type = file_type.lower()
             self.verbose_print(f"Searching in {file_type} files with normalized type {normalized_file_type}...")
             handler_class = dispatch.get(normalized_file_type, TextHandler)
-            handler = handler_class(self.search_string, normalized_file_type, self.search_path, self.verbose, self.list_only, self.ignore_errors, self.binary_files)
+            handler = handler_class(self.search_strings, normalized_file_type, self.search_path, self.verbose, self.list_only, self.ignore_errors, self.binary_files, self.case_sensitive)
             handler.search()

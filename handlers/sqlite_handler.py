@@ -1,3 +1,4 @@
+# sqlite_handler.py
 import sqlite3
 from .base_handler import BaseHandler
 
@@ -18,13 +19,14 @@ class SQLiteHandler(BaseHandler):
                 columns = cursor.fetchall()
                 column_names = [column[1] for column in columns]
                 for column in column_names:
-                    cursor.execute(f"SELECT * FROM {table_name} WHERE {column} LIKE ?", ('%' + self.search_string + '%',))
-                    rows = cursor.fetchall()
-                    if rows:
-                        if self.list_only:
-                            print(file_path)
-                        else:
-                            print(f"Found in {file_path} in table {table_name}, column {column}")
+                    for search_string in self.search_strings:
+                        cursor.execute(f"SELECT * FROM {table_name} WHERE {column} LIKE ?", ('%' + search_string + '%',))
+                        rows = cursor.fetchall()
+                        if rows:
+                            if self.list_only:
+                                print(file_path)
+                            else:
+                                print(f"Found in {file_path} in table {table_name}, column {column}")
             conn.close()
         except Exception as e:
             self.error_handler(str(e), file_path)
