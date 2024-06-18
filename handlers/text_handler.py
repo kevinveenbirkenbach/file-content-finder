@@ -11,8 +11,6 @@ class TextHandler(BaseHandler):
             grep_cmd = ['grep', '-H']
             if self.fixed:
                 grep_cmd.append('-F')
-            else:
-                grep_cmd.append('-E')
             if not self.case_sensitive:
                 grep_cmd.append('-i')
             grep_cmd.extend([search_string, file_path])
