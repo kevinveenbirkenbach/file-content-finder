@@ -46,14 +46,10 @@ def search_files(search_string, file_types, search_path, verbose, list_only, ign
         search_function = dispatch.get(normalized_file_type, search_text_files)
         search_function(search_string, normalized_file_type, search_path, verbose, list_only, ignore_errors, binary_files)
 
-def error_handler(err, ignore_errors, file_type, file_path=None):
+def error_handler(err, ignore_errors, file_path):
     if err:
-        message = f"Errors occurred while searching {file_type} files"
-        if file_path:
-            message += f": {file_path}"
-        else:
-            message += f": {err.decode()}"
-        print(message, file=sys.stderr)
+        message = f"Errors occurred while searching: {file_path}"
+        print(message, err, file=sys.stderr)
         if not ignore_errors:
             sys.exit(1)
 
@@ -67,8 +63,8 @@ def execute_search(cmd, verbose, list_only, ignore_errors, file_type=None):
         try:
             output = out.decode()
         except UnicodeDecodeError as e:
-            error_handler(str(e), ignore_errors, file_type, cmd[-1])
-            sys.exit(1)
+            error_handler(str(e), ignore_errors, cmd[-1])
+            return  # Ensure the function exits if error_handler is called
 
         if list_only:
             results = output.strip().split('\n')
@@ -78,7 +74,7 @@ def execute_search(cmd, verbose, list_only, ignore_errors, file_type=None):
         else:
             print(output)
 
-    error_handler(err, ignore_errors, file_type)
+    error_handler(err, ignore_errors, cmd[-1])
 
 def search_pdfs(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
     find_cmd = ['find', search_path, '-type', 'f', '-iname', file_type, '-print0']
@@ -99,19 +95,23 @@ def process_text_file(file_path, search_string, verbose, list_only, ignore_error
     execute_search(grep_cmd, verbose, list_only, ignore_errors, "*.txt")
 
 def process_image(file_path, search_string, verbose, list_only, ignore_errors, binary_files):
-    text = ""
-    if file_path.endswith(".pdf"):
-        pages = convert_from_path(file_path)
-        for page in pages:
-            text += pytesseract.image_to_string(page)
-    else:
-        text += pytesseract.image_to_string(Image.open(file_path))
-
-    if search_string in text:
-        if list_only:
-            print(file_path)
+    try:
+        text = ""
+        if file_path.endswith(".pdf"):
+            pages = convert_from_path(file_path)
+            for page in pages:
+                text += pytesseract.image_to_string(page)
         else:
-            print(f"Found in {file_path}")
+            text += pytesseract.image_to_string(Image.open(file_path))
+
+        if search_string in text:
+            if list_only:
+                print(file_path)
+            else:
+                print(f"Found in {file_path}")
+        return None
+    except Exception as e:
+        error_handler(str(e), ignore_errors, file_path)
     return None
 
 def search_images(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
@@ -132,7 +132,7 @@ def process_xls(file_path, search_string, verbose, list_only, ignore_errors, bin
                             print(f"Found in {file_path}")
                         return file_path
     except Exception as e:
-        return str(e)
+        error_handler(str(e), ignore_errors, file_path)
     return None
 
 def search_xls_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
@@ -153,7 +153,7 @@ def process_odp(file_path, search_string, verbose, list_only, ignore_errors, bin
                                 print(f"Found in {file_path}")
                             return file_path
     except Exception as e:
-        return str(e)
+        error_handler(str(e), ignore_errors, file_path)
     return None
 
 def search_odp_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
@@ -174,7 +174,7 @@ def process_files_in_parallel(find_cmd, process_func, search_string, verbose, li
                     result = future.result()
                     if result:
                         if isinstance(result, str) and "error" in result.lower():
-                            error_handler(result, ignore_errors, process_func.__name__, result)
+                            error_handler(result, ignore_errors, file_path)
                         elif result:
                             if list_only:
                                 print(result)
@@ -247,8 +247,6 @@ if __name__ == "__main__":
         '.tar', 
         '.zip',
         '.xcf',
-        
-        # To implement
         '.doc'
     ]
 
