@@ -51,6 +51,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Perform case sensitive search."
     )
+    parser.add_argument(
+        "-f", "--fixed",
+        action="store_true",
+        help="Perform fixed-string search (disables regex)."
+    )
 
     args = parser.parse_args()
 
@@ -75,5 +80,5 @@ if __name__ == "__main__":
     else:
         skip_patterns = [pattern.lower() for pattern in args.skip]
 
-    searcher = Searcher(args.search_strings, args.types, args.path, args.verbose, args.list, args.ignore, skip_patterns, args.binary_files, args.case_sensitive)
+    searcher = Searcher(args.search_strings, args.types, args.path, args.verbose, args.list, args.ignore, skip_patterns, args.binary_files, args.case_sensitive, args.fixed)
     searcher.search_files()

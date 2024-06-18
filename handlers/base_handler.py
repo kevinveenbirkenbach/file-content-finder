@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import partial
 
 class BaseHandler:
-    def __init__(self, search_strings, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None, case_sensitive=False):
+    def __init__(self, search_strings, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None, case_sensitive=False, fixed=False):
         self.search_strings = search_strings
         self.file_type = file_type
         self.search_path = search_path
@@ -13,6 +13,7 @@ class BaseHandler:
         self.ignore_errors = ignore_errors
         self.binary_files = binary_files
         self.case_sensitive = case_sensitive
+        self.fixed = fixed
 
     def verbose_print(self, *messages):
         if self.verbose:
