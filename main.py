@@ -58,14 +58,11 @@ if __name__ == "__main__":
         '.ldb',
         '.lnk',
         '.log',
-        '.mp4',
         '.old',
         '.pod',
-        '.sqlite', 
         '.tar', 
         '.zip',
         '.xcf',
-        '.doc'
     ]
 
     if args.add:

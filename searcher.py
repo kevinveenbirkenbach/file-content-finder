@@ -8,8 +8,8 @@ from handlers.sqlite_handler import SQLiteHandler
 from handlers.odp_handler import ODPHandler
 from handlers.metadata_handler import MetadataHandler
 from handlers.composite_handler import CompositeHandler
-from handlers.ppt_handler import PPTHandler
 from handlers.pptx_handler import PPTXHandler
+from handlers.odt_handler import ODTHandler 
 
 class Searcher:
     def __init__(self, search_string, file_types, search_path, verbose, list_only, ignore_errors, skip_patterns, binary_files):
@@ -49,9 +49,8 @@ class Searcher:
             "*.png": CompositeHandler,
             "*.xls": XLSHandler,
             "*.odp": ODPHandler,
-            "*.odt": DocHandler,
-            "*.doc": DocHandler,
-            "*.ppt": PPTHandler,
+            "*.odt": ODTHandler,
+            #"*.doc": DocHandler,
             "*.pptx": PPTXHandler,
             "*.sqlite": SQLiteHandler,
             "*.mp3": MetadataHandler,
