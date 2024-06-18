@@ -161,19 +161,12 @@ if __name__ == "__main__":
         "-s", "--skip",
         nargs="*",
         help="Optional list of file extensions to skip (e.g., .zip .tar .gz).",
-        default=[
-            '.db',
-            '.db-wal',
-            '.gz',
-            '.iso',
-            '.log',
-            '.mp4',
-            '.old',
-            '.sqlite', 
-            '.tar', 
-            '.zip',
-            '.xcf'
-        ]
+        default=[]
+    )
+    parser.add_argument(
+        "-a", "--add",
+        action="store_true",
+        help="Extend the default list of skipped files."
     )
     parser.add_argument(
         "-b", "--binary-files",
@@ -182,5 +175,24 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
+    default_skip = [
+        '.db',
+        '.db-wal',
+        '.gz',
+        '.iso',
+        '.log',
+        '.mp4',
+        '.old',
+        '.sqlite', 
+        '.tar', 
+        '.zip',
+        '.xcf'
+    ]
+
+    if args.add:
+        skip_patterns = default_skip + args.skip
+    else:
+        skip_patterns = args.skip
     
-    search_files(args.search_string, args.types, args.path, args.verbose, args.list, args.ignore, args.skip, args.binary_files)
+    search_files(args.search_string, args.types, args.path, args.verbose, args.list, args.ignore, skip_patterns, args.binary_files)
