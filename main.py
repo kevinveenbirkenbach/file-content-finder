@@ -50,8 +50,22 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     default_skip = [
-        '.db', '.db-wal', '.gpg', '.gz', '.iso', '.ldb', '.lnk', '.log', '.mp4',
-        '.old', '.pod', '.sqlite', '.tar', '.zip', '.xcf', '.doc'
+        '.db',
+        '.db-wal',
+        '.gpg',
+        '.gz',
+        '.iso',
+        '.ldb',
+        '.lnk',
+        '.log',
+        '.mp4',
+        '.old',
+        '.pod',
+        '.sqlite', 
+        '.tar', 
+        '.zip',
+        '.xcf',
+        '.doc'
     ]
 
     if args.add:

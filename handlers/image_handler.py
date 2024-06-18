@@ -1,7 +1,7 @@
+from .base_handler import BaseHandler
 import pytesseract
 from PIL import Image
 from pdf2image import convert_from_path
-from .base_handler import BaseHandler
 
 class ImageHandler(BaseHandler):
     def search(self):
@@ -11,6 +11,7 @@ class ImageHandler(BaseHandler):
     def process_image(self, file_path):
         try:
             text = pytesseract.image_to_string(Image.open(file_path))
+
             if self.search_string in text:
                 if self.list_only:
                     print(file_path)

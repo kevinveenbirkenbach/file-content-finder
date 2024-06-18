@@ -1,11 +1,13 @@
 import os
 import fnmatch
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from functools import partial
-from handlers import (
-    PDFHandler, TextHandler, ImageHandler, XLSHandler,
-    DocHandler, SQLiteHandler, ODPHandler, MetadataHandler
-)
+from handlers.pdf_handler import PDFHandler
+from handlers.text_handler import TextHandler
+from handlers.xls_handler import XLSHandler
+from handlers.doc_handler import DocHandler
+from handlers.sqlite_handler import SQLiteHandler
+from handlers.odp_handler import ODPHandler
+from handlers.metadata_handler import MetadataHandler
+from handlers.composite_handler import CompositeHandler  # Ensure the CompositeHandler is imported
 
 class Searcher:
     def __init__(self, search_string, file_types, search_path, verbose, list_only, ignore_errors, skip_patterns, binary_files):
@@ -40,9 +42,9 @@ class Searcher:
         
         dispatch = {
             "*.pdf": PDFHandler,
-            "*.jpeg": ImageHandler,
-            "*.jpg": ImageHandler,
-            "*.png": ImageHandler,
+            "*.jpeg": CompositeHandler,
+            "*.jpg": CompositeHandler,
+            "*.png": CompositeHandler,
             "*.xls": XLSHandler,
             "*.odp": ODPHandler,
             "*.odt": DocHandler,
