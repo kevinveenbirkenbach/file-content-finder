@@ -11,9 +11,10 @@ if __name__ == "__main__":
         default=[]
     )
     parser.add_argument(
-        "-p", "--path",
-        help="The path to search in. If not provided, the current directory will be used.",
-        default="."
+        "-p", "--paths",
+        nargs="+",
+        help="The paths to search in. If not provided, the current directory will be used.",
+        default=["."]
     )
     parser.add_argument(
         "-v", "--verbose",
@@ -80,5 +81,5 @@ if __name__ == "__main__":
     else:
         skip_patterns = [pattern.lower() for pattern in args.skip]
 
-    searcher = Searcher(args.search_strings, args.types, args.path, args.verbose, args.list, args.ignore, skip_patterns, args.binary_files, args.case_sensitive, args.fixed)
+    searcher = Searcher(args.search_strings, args.types, args.paths, args.verbose, args.list, args.ignore, skip_patterns, args.binary_files, args.case_sensitive, args.fixed)
     searcher.search_files()
