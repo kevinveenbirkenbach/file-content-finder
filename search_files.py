@@ -19,8 +19,8 @@ def find_all_file_types(search_path, skip_patterns):
     file_types = set()
     for root, _, files in os.walk(search_path):
         for file in files:
-            ext = os.path.splitext(file)[1]
-            if ext and not any(fnmatch.fnmatch(ext, pattern) for pattern in skip_patterns):
+            ext = os.path.splitext(file)[1].lower()  # Normalize to lower case
+            if ext and not any(fnmatch.fnmatch(ext, pattern.lower()) for pattern in skip_patterns):
                 file_types.add(f"*{ext}")
     return list(file_types)
 
@@ -38,9 +38,10 @@ def search_files(search_string, file_types, search_path, verbose, list_only, ign
     }
 
     for file_type in file_types:
+        normalized_file_type = file_type.lower()
         verbose_print(verbose, f"Searching in {file_type} files...")
-        search_function = dispatch.get(file_type, search_text_files)
-        search_function(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files)
+        search_function = dispatch.get(normalized_file_type, search_text_files)
+        search_function(search_string, normalized_file_type, search_path, verbose, list_only, ignore_errors, binary_files)
 
 def error_handler(err, ignore_errors, file_type, file_path=None):
     if err:
@@ -77,7 +78,7 @@ def execute_search(cmd, verbose, list_only, ignore_errors, file_type=None):
     error_handler(err, ignore_errors, file_type)
 
 def search_pdfs(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
-    find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
+    find_cmd = ['find', search_path, '-type', 'f', '-iname', file_type, '-print0']
     process_files_in_parallel(find_cmd, process_pdf, search_string, verbose, list_only, ignore_errors, binary_files)
 
 def process_pdf(file_path, search_string, verbose, list_only, ignore_errors, binary_files):
@@ -85,7 +86,7 @@ def process_pdf(file_path, search_string, verbose, list_only, ignore_errors, bin
     execute_search(grep_cmd, verbose, list_only, ignore_errors, "*.pdf")
 
 def search_text_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files):
-    find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
+    find_cmd = ['find', search_path, '-type', 'f', '-iname', file_type, '-print0']
     process_files_in_parallel(find_cmd, process_text_file, search_string, verbose, list_only, ignore_errors, binary_files=binary_files)
 
 def process_text_file(file_path, search_string, verbose, list_only, ignore_errors, binary_files):
@@ -111,7 +112,7 @@ def process_image(file_path, search_string, verbose, list_only, ignore_errors, b
     return None
 
 def search_images(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
-    find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
+    find_cmd = ['find', search_path, '-type', 'f', '-iname', file_type, '-print0']
     process_files_in_parallel(find_cmd, process_image, search_string, verbose, list_only, ignore_errors)
 
 def process_xls(file_path, search_string, verbose, list_only, ignore_errors, binary_files=None):
@@ -132,7 +133,7 @@ def process_xls(file_path, search_string, verbose, list_only, ignore_errors, bin
     return None
 
 def search_xls_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
-    find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
+    find_cmd = ['find', search_path, '-type', 'f', '-iname', file_type, '-print0']
     process_files_in_parallel(find_cmd, process_xls, search_string, verbose, list_only, ignore_errors)
 
 def process_odp(file_path, search_string, verbose, list_only, ignore_errors, binary_files=None):
@@ -153,7 +154,7 @@ def process_odp(file_path, search_string, verbose, list_only, ignore_errors, bin
     return None
 
 def search_odp_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
-    find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
+    find_cmd = ['find', search_path, '-type', 'f', '-iname', file_type, '-print0']
     process_files_in_parallel(find_cmd, process_odp, search_string, verbose, list_only, ignore_errors)
 
 def process_files_in_parallel(find_cmd, process_func, search_string, verbose, list_only, ignore_errors, binary_files=None):
@@ -216,14 +217,13 @@ if __name__ == "__main__":
         help="Extend the default list of skipped files."
     )
     parser.add_argument(
-        "-b", "--binary-files",
+        "-b",
+        "--binary-files",
         action="store_true",
         help="Treat binary files as text for searching."
     )
 
     args = parser.parse_args()
-
-
 
     default_skip = [
         '.db',
@@ -242,8 +242,8 @@ if __name__ == "__main__":
     ]
 
     if args.add:
-        skip_patterns = default_skip + args.skip
+        skip_patterns = default_skip + [pattern.lower() for pattern in args.skip]
     else:
-        skip_patterns = args.skip
+        skip_patterns = [pattern.lower() for pattern in args.skip]
     
     search_files(args.search_string, args.types, args.path, args.verbose, args.list, args.ignore, skip_patterns, args.binary_files)
