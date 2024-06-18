@@ -25,6 +25,9 @@ def find_all_file_types(search_path, skip_patterns):
     return list(file_types)
 
 def search_files(search_string, file_types, search_path, verbose, list_only, ignore_errors, skip_patterns, binary_files):
+    if not search_path.endswith('/'):
+        search_path += '/'
+    
     if not file_types:
         file_types = find_all_file_types(search_path, skip_patterns)
     
@@ -236,14 +239,17 @@ if __name__ == "__main__":
         '.gpg',
         '.gz',
         '.iso',
-        '.ldb',        # https://learn.microsoft.com/de-de/office/troubleshoot/access/ldb-file-description
+        '.ldb',
         '.log',
         '.mp4',
         '.old',
         '.sqlite', 
         '.tar', 
         '.zip',
-        '.xcf'
+        '.xcf',
+        
+        # To implement
+        '.doc'
     ]
 
     if args.add:
