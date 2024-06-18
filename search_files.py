@@ -7,6 +7,7 @@ from PIL import Image
 from pdf2image import convert_from_path
 import xlrd
 import fnmatch
+import zipfile
 
 def verbose_print(verbose, *messages):
     if verbose:
@@ -32,6 +33,8 @@ def search_files(search_string, file_types, search_path, verbose, list_only, ign
             search_images(search_string, file_type, search_path, verbose, list_only, ignore_errors)
         elif file_type == "*.xls":
             search_xls_files(search_string, file_type, search_path, verbose, list_only, ignore_errors)
+        elif file_type == "*.odp":
+            search_odp_files(search_string, file_type, search_path, verbose, list_only, ignore_errors)
         else:
             search_text_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files)
 
@@ -128,13 +131,39 @@ def search_xls_files(search_string, file_type, search_path, verbose, list_only, 
 
     error_handler(err, ignore_errors, file_type)
 
+def search_odp_files(search_string, file_type, search_path, verbose, list_only, ignore_errors):
+    find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
+    verbose_print(verbose, "Executing:", ' '.join(find_cmd))
+
+    find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
+    out, err = find_proc.communicate()
+    
+    if out:
+        for file_path in out.decode().split('\0'):
+            if file_path:
+                try:
+                    with zipfile.ZipFile(file_path, 'r') as odp:
+                        for entry in odp.namelist():
+                            if entry.endswith('.xml'):
+                                with odp.open(entry) as xml_file:
+                                    content = xml_file.read().decode('utf-8')
+                                    if search_string in content:
+                                        if list_only:
+                                            print(file_path)
+                                        else:
+                                            print(f"Found in {file_path} (Entry: {entry})")
+                except Exception as e:
+                    error_handler(str(e), ignore_errors, file_type)
+
+    error_handler(err, ignore_errors, file_type)
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Search for a string in various file types, including PDF, text, image, and xls files.")
+    parser = argparse.ArgumentParser(description="Search for a string in various file types, including PDF, text, image, xls, and odp files.")
     parser.add_argument("search_string", help="The string to search for.")
     parser.add_argument(
         "-t", "--types",
         nargs="*",
-        help="Optional list of file types to search in (e.g., *.txt *.md *.jpg *.xls). If not provided, all files will be searched.",
+        help="Optional list of file types to search in (e.g., *.txt *.md *.jpg *.xls *.odp). If not provided, all files will be searched.",
         default=[]
     )
     parser.add_argument(
