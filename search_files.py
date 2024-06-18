@@ -19,7 +19,7 @@ def find_all_file_types(search_path, skip_extensions):
                 file_types.add(f"*{ext}")
     return list(file_types)
 
-def search_files(search_string, file_types, search_path, verbose, list_only, ignore_errors, skip_extensions):
+def search_files(search_string, file_types, search_path, verbose, list_only, ignore_errors, skip_extensions, binary_files):
     if not file_types:
         file_types = find_all_file_types(search_path, skip_extensions)
 
@@ -29,7 +29,7 @@ def search_files(search_string, file_types, search_path, verbose, list_only, ign
         elif file_type in ["*.jpeg", "*.jpg", "*.png"]:
             search_images(search_string, file_type, search_path, verbose, list_only, ignore_errors)
         else:
-            search_text_files(search_string, file_type, search_path, verbose, list_only, ignore_errors)
+            search_text_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files)
 
 def verbose_output(verbose, find_cmd, grep_cmd, file_type):
     verbose_print(verbose, f"Searching in {file_type} files...")
@@ -66,9 +66,11 @@ def search_pdfs(search_string, file_type, search_path, verbose, list_only, ignor
     grep_cmd = ['xargs', '-0', 'pdfgrep', '-H', search_string]
     execute_search(verbose, find_cmd, grep_cmd, file_type, list_only, ignore_errors)
 
-def search_text_files(search_string, file_type, search_path, verbose, list_only, ignore_errors):
+def search_text_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files):
     find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
     grep_cmd = ['xargs', '-0', 'grep', '-H', search_string]
+    if binary_files:
+        grep_cmd.insert(3, '--binary-files=text')
     execute_search(verbose, find_cmd, grep_cmd, file_type, list_only, ignore_errors)
 
 def search_images(search_string, file_type, search_path, verbose, list_only, ignore_errors):
@@ -129,9 +131,14 @@ if __name__ == "__main__":
         "-s", "--skip",
         nargs="*",
         help="Optional list of file extensions to skip (e.g., .zip .tar .gz).",
-        default=['.zip', '.tar', '.gz', '.mp4']
+        default=['.zip', '.tar', '.gz', '.mp4', '.iso']
+    )
+    parser.add_argument(
+        "-b", "--binary-files",
+        action="store_true",
+        help="Treat binary files as text for searching."
     )
 
     args = parser.parse_args()
     
-    search_files(args.search_string, args.types, args.path, args.verbose, args.list, args.ignore, args.skip)
+    search_files(args.search_string, args.types, args.path, args.verbose, args.list, args.ignore, args.skip, args.binary_files)
