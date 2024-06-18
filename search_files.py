@@ -43,9 +43,12 @@ def verbose_output(verbose, find_cmd, grep_cmd, file_type):
     verbose_print(verbose, "Executing:", ' '.join(find_cmd))
     verbose_print(verbose, "Executing:", ' '.join(grep_cmd))
 
-def error_handler(err, ignore_errors, file_type):
+def error_handler(err, ignore_errors, file_type, file_path=None):
     if err:
-        print(f"Errors occurred while searching {file_type} files:", err.decode(), file=sys.stderr)
+        if file_path:
+            print(f"Errors occurred while searching {file_type} files: {file_path}", file=sys.stderr)
+        else:
+            print(f"Errors occurred while searching {file_type} files:", err.decode(), file=sys.stderr)
         if not ignore_errors:
             sys.exit(1)
 
@@ -59,13 +62,20 @@ def execute_search(verbose, find_cmd, grep_cmd, file_type, list_only, ignore_err
     out, err = grep_proc.communicate()
     
     if out:
+        try:
+            output = out.decode()
+        except UnicodeDecodeError as e:
+            error_handler(str(e), ignore_errors, file_type, find_cmd[-1])
+            sys.exit(1)
+        
         if list_only:
-            results = out.decode().strip().split('\n')
+            results = output.strip().split('\n')
             files_found = set(result.split(':')[0] for result in results)
             for file in files_found:
                 print(file)
         else:
-            print(out.decode())
+            print(output)
+    
     error_handler(err, ignore_errors, file_type)
 
 def search_pdfs(search_string, file_type, search_path, verbose, list_only, ignore_errors):
