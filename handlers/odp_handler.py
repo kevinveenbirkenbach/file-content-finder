@@ -12,7 +12,7 @@ class ODPHandler(BaseHandler):
                 for entry in odp.namelist():
                     if entry.endswith('.xml'):
                         with odp.open(entry) as xml_file:
-                            content = xml_file.read()decode('utf-8', errors='ignore')
+                            content = xml_file.read().decode('utf-8', errors='ignore')
                             if self.search_string in content:
                                 if self.list_only:
                                     print(file_path)
