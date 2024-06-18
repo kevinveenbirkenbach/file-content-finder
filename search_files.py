@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import partial
 import docx
 import sqlite3
+from mutagen import File as MutagenFile
 
 def verbose_print(verbose, *messages):
     if verbose:
@@ -42,6 +43,13 @@ def search_files(search_string, file_types, search_path, verbose, list_only, ign
         "*.odp": search_odp_files,
         "*.doc": search_doc_files,
         "*.sqlite": search_sqlite_files,
+        "*.mp3": search_audio_files,
+        "*.wav": search_audio_files,
+        "*.flac": search_audio_files,
+        "*.mp4": search_video_files,
+        "*.avi": search_video_files,
+        "*.mov": search_video_files,
+        "*.wmv": search_video_files,
     }
 
     for file_type in file_types:
@@ -220,6 +228,27 @@ def search_odp_files(search_string, file_type, search_path, verbose, list_only, 
     find_cmd = ['find', search_path, '-type', 'f', '-iname', file_type, '-print0']
     process_files_in_parallel(find_cmd, process_odp, search_string, verbose, list_only, ignore_errors)
 
+def process_metadata(file_path, search_string, verbose, list_only, ignore_errors, binary_files=None):
+    try:
+        metadata = subprocess.check_output(['exiftool', file_path], universal_newlines=True)
+        if search_string in metadata:
+            if list_only:
+                print(file_path)
+            else:
+                print(f"Found in metadata of {file_path}")
+        return None
+    except Exception as e:
+        error_handler(list_only, str(e), ignore_errors, file_path)
+    return None
+
+def search_audio_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
+    find_cmd = ['find', search_path, '-type', 'f', '-iname', file_type, '-print0']
+    process_files_in_parallel(find_cmd, process_metadata, search_string, verbose, list_only, ignore_errors)
+
+def search_video_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
+    find_cmd = ['find', search_path, '-type', 'f', '-iname', file_type, '-print0']
+    process_files_in_parallel(find_cmd, process_metadata, search_string, verbose, list_only, ignore_errors)
+
 def process_files_in_parallel(find_cmd, process_func, search_string, verbose, list_only, ignore_errors, binary_files=None):
     find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
     out, err = find_proc.communicate()
@@ -246,7 +275,7 @@ def process_files_in_parallel(find_cmd, process_func, search_string, verbose, li
                 raise
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Search for a string in various file types, including PDF, text, image, xls, doc, and odp files.")
+    parser = argparse.ArgumentParser(description="Search for a string in various file types, including PDF, text, image, xls, doc, sqlite, and odp files.")
     parser.add_argument("search_string", help="The string to search for.")
     parser.add_argument(
         "-t", "--types",
@@ -301,12 +330,13 @@ if __name__ == "__main__":
         '.iso',
         '.ldb',
         '.log',
-        '.mp3',
         '.mp4',
         '.old',
+        '.sqlite', 
         '.tar', 
         '.zip',
-        '.xcf'
+        '.xcf',
+        '.doc'
     ]
 
     if args.add:
