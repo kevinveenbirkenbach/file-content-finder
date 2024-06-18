@@ -46,12 +46,19 @@ def search_files(search_string, file_types, search_path, verbose, list_only, ign
         search_function = dispatch.get(normalized_file_type, search_text_files)
         search_function(search_string, normalized_file_type, search_path, verbose, list_only, ignore_errors, binary_files)
 
-def error_handler(err, ignore_errors, file_path):
+class SearchExecutionError(Exception):
+    def __init__(self, message, file_path):
+        super().__init__(
+            f"Error occurred during search execution in {file_path}: {message}"
+        )
+
+def error_handler(list_only, err, ignore_errors, file_path):
     if err:
-        message = f"Errors occurred while searching: {file_path}"
-        print(message, err, file=sys.stderr)
+        execution_exception = SearchExecutionError(err, file_path)
+        if not list_only:
+            print(f"Ignoring the following error: {execution_exception}")
         if not ignore_errors:
-            sys.exit(1)
+            raise execution_exception
 
 def execute_search(cmd, verbose, list_only, ignore_errors, file_type=None):
     verbose_print(verbose, "Executing:", ' '.join(cmd))
@@ -63,7 +70,7 @@ def execute_search(cmd, verbose, list_only, ignore_errors, file_type=None):
         try:
             output = out.decode()
         except UnicodeDecodeError as e:
-            error_handler(str(e), ignore_errors, cmd[-1])
+            error_handler(list_only, str(e), ignore_errors, cmd[-1])
             return  # Ensure the function exits if error_handler is called
 
         if list_only:
@@ -74,7 +81,7 @@ def execute_search(cmd, verbose, list_only, ignore_errors, file_type=None):
         else:
             print(output)
 
-    error_handler(err, ignore_errors, cmd[-1])
+    error_handler(list_only, err, ignore_errors, cmd[-1])
 
 def search_pdfs(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
     find_cmd = ['find', search_path, '-type', 'f', '-iname', file_type, '-print0']
@@ -82,7 +89,7 @@ def search_pdfs(search_string, file_type, search_path, verbose, list_only, ignor
 
 def process_pdf(file_path, search_string, verbose, list_only, ignore_errors, binary_files):
     grep_cmd = ['pdfgrep', '-H', search_string, file_path]
-    execute_search(grep_cmd, verbose, list_only, ignore_errors, "*.pdf")
+    execute_search(grep_cmd, verbose, list_only, True, "*.pdf")
 
 def search_text_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files):
     find_cmd = ['find', search_path, '-type', 'f', '-iname', file_type, '-print0']
@@ -111,7 +118,7 @@ def process_image(file_path, search_string, verbose, list_only, ignore_errors, b
                 print(f"Found in {file_path}")
         return None
     except Exception as e:
-        error_handler(str(e), ignore_errors, file_path)
+        error_handler(list_only, str(e), ignore_errors, file_path)
     return None
 
 def search_images(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
@@ -132,7 +139,7 @@ def process_xls(file_path, search_string, verbose, list_only, ignore_errors, bin
                             print(f"Found in {file_path}")
                         return file_path
     except Exception as e:
-        error_handler(str(e), ignore_errors, file_path)
+        error_handler(list_only, str(e), ignore_errors, file_path)
     return None
 
 def search_xls_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
@@ -153,7 +160,7 @@ def process_odp(file_path, search_string, verbose, list_only, ignore_errors, bin
                                 print(f"Found in {file_path}")
                             return file_path
     except Exception as e:
-        error_handler(str(e), ignore_errors, file_path)
+        error_handler(list_only, str(e), ignore_errors, file_path)
     return None
 
 def search_odp_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None):
@@ -174,7 +181,7 @@ def process_files_in_parallel(find_cmd, process_func, search_string, verbose, li
                     result = future.result()
                     if result:
                         if isinstance(result, str) and "error" in result.lower():
-                            error_handler(result, ignore_errors, file_path)
+                            error_handler(list_only, result, ignore_errors, file_path)
                         elif result:
                             if list_only:
                                 print(result)
