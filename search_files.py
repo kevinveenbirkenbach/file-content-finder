@@ -39,7 +39,7 @@ def search_files(search_string, file_types, search_path, verbose, list_only, ign
 
     for file_type in file_types:
         normalized_file_type = file_type.lower()
-        verbose_print(verbose, f"Searching in {file_type} files...")
+        verbose_print(verbose, f"Searching in {file_type} files with normalized type {normalized_file_type}...")
         search_function = dispatch.get(normalized_file_type, search_text_files)
         search_function(search_string, normalized_file_type, search_path, verbose, list_only, ignore_errors, binary_files)
 
@@ -163,18 +163,24 @@ def process_files_in_parallel(find_cmd, process_func, search_string, verbose, li
 
     if out:
         file_paths = out.decode().split('\0')
+        verbose_print(verbose, f"Processing {len(file_paths)} files...")
         with ThreadPoolExecutor() as executor:
             futures = {executor.submit(partial(process_func, file_path, search_string, verbose, list_only, ignore_errors, binary_files)): file_path for file_path in file_paths if file_path}
-            for future in as_completed(futures):
-                result = future.result()
-                if result:
-                    if isinstance(result, str) and "error" in result.lower():
-                        error_handler(result, ignore_errors, process_func.__name__, result)
-                    elif result:
-                        if list_only:
-                            print(result)
-                        else:
-                            print(f"Found in {result}")
+            try:
+                for future in as_completed(futures):
+                    result = future.result()
+                    if result:
+                        if isinstance(result, str) and "error" in result.lower():
+                            error_handler(result, ignore_errors, process_func.__name__, result)
+                        elif result:
+                            if list_only:
+                                print(result)
+                            else:
+                                print(f"Found in {result}")
+            except KeyboardInterrupt:
+                for future in futures:
+                    future.cancel()
+                raise
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Search for a string in various file types, including PDF, text, image, xls, and odp files.")
@@ -217,8 +223,7 @@ if __name__ == "__main__":
         help="Extend the default list of skipped files."
     )
     parser.add_argument(
-        "-b",
-        "--binary-files",
+        "-b", "--binary-files",
         action="store_true",
         help="Treat binary files as text for searching."
     )
