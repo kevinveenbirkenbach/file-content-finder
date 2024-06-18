@@ -28,6 +28,7 @@ def search_files(search_string, file_types, search_path, verbose, list_only, ign
         file_types = find_all_file_types(search_path, skip_patterns)
 
     for file_type in file_types:
+        verbose_print(verbose, f"Searching in {file_type} files...")
         if file_type == "*.pdf":
             search_pdfs(search_string, file_type, search_path, verbose, list_only, ignore_errors)
         elif file_type in ["*.jpeg", "*.jpg", "*.png"]:
@@ -37,12 +38,7 @@ def search_files(search_string, file_types, search_path, verbose, list_only, ign
         elif file_type == "*.odp":
             search_odp_files(search_string, file_type, search_path, verbose, list_only, ignore_errors)
         else:
-            search_text_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files)
-
-def verbose_output(verbose, find_cmd, grep_cmd, file_type):
-    verbose_print(verbose, f"Searching in {file_type} files...")
-    verbose_print(verbose, "Executing:", ' '.join(find_cmd))
-    verbose_print(verbose, "Executing:", ' '.join(grep_cmd))
+            search_text_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files)    
 
 def error_handler(err, ignore_errors, file_type, file_path=None):
     if err:
@@ -53,20 +49,17 @@ def error_handler(err, ignore_errors, file_type, file_path=None):
         if not ignore_errors:
             sys.exit(1)
 
-def execute_search(verbose, find_cmd, grep_cmd, file_type, list_only, ignore_errors):
-    verbose_output(verbose, find_cmd, grep_cmd, file_type)
+def execute_search(cmd, file_type, verbose, list_only, ignore_errors):
+    verbose_print(verbose, "Executing:", ' '.join(cmd))
 
-    find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
-    grep_proc = subprocess.Popen(grep_cmd, stdin=find_proc.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    
-    find_proc.stdout.close()  # Allow find_proc to receive a SIGPIPE if grep_proc exits
-    out, err = grep_proc.communicate()
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = proc.communicate()
     
     if out:
         try:
             output = out.decode()
         except UnicodeDecodeError as e:
-            error_handler(str(e), ignore_errors, file_type, find_cmd[-1])
+            error_handler(str(e), ignore_errors, file_type, cmd[-1])
             sys.exit(1)
         
         if list_only:
@@ -81,15 +74,43 @@ def execute_search(verbose, find_cmd, grep_cmd, file_type, list_only, ignore_err
 
 def search_pdfs(search_string, file_type, search_path, verbose, list_only, ignore_errors):
     find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
-    grep_cmd = ['xargs', '-0', 'pdfgrep', '-H', search_string]
-    execute_search(verbose, find_cmd, grep_cmd, file_type, list_only, ignore_errors)
+
+    find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
+    out, err = find_proc.communicate()
+
+    if out:
+        file_paths = out.decode().split('\0')
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(process_pdf, file_path, search_string, verbose, list_only, ignore_errors): file_path for file_path in file_paths if file_path}
+            for future in as_completed(futures):
+                future.result()
+    
+    error_handler(err, ignore_errors, file_type)
+
+def process_pdf(file_path, search_string, verbose, list_only, ignore_errors):
+    grep_cmd = ['pdfgrep', '-H', search_string, file_path]
+    execute_search(grep_cmd, "*.pdf", verbose, list_only, ignore_errors)
 
 def search_text_files(search_string, file_type, search_path, verbose, list_only, ignore_errors, binary_files):
     find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
-    grep_cmd = ['xargs', '-0', 'grep', '-H', search_string]
+    
+    find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
+    out, err = find_proc.communicate()
+
+    if out:
+        file_paths = out.decode().split('\0')
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(process_text_file, file_path, search_string, verbose, list_only, ignore_errors, binary_files): file_path for file_path in file_paths if file_path}
+            for future in as_completed(futures):
+                future.result()
+    
+    error_handler(err, ignore_errors, file_type)
+
+def process_text_file(file_path, search_string, verbose, list_only, ignore_errors, binary_files):
+    grep_cmd = ['grep', '-H', search_string, file_path]
     if binary_files:
-        grep_cmd.insert(3, '--binary-files=text')
-    execute_search(verbose, find_cmd, grep_cmd, file_type, list_only, ignore_errors)
+        grep_cmd.insert(2, '--binary-files=text')
+    execute_search(grep_cmd, "*.txt", verbose, list_only, ignore_errors)
 
 def process_image(file_path, search_string):
     text = ""
@@ -122,7 +143,21 @@ def search_images(search_string, file_type, search_path, verbose, list_only, ign
                         print(result)
                     else:
                         print(f"Found in {result}")
+    
     error_handler(err, ignore_errors, file_type)
+
+def process_xls(file_path, search_string):
+    try:
+        workbook = xlrd.open_workbook(file_path)
+        for sheet in workbook.sheets():
+            for row_idx in range(sheet.nrows):
+                for col_idx in range(sheet.ncols):
+                    cell_value = sheet.cell(row_idx, col_idx).value
+                    if search_string in str(cell_value):
+                        return file_path
+    except Exception as e:
+        return str(e)
+    return None
 
 def search_xls_files(search_string, file_type, search_path, verbose, list_only, ignore_errors):
     find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
@@ -130,25 +165,36 @@ def search_xls_files(search_string, file_type, search_path, verbose, list_only, 
 
     find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
     out, err = find_proc.communicate()
-    
-    if out:
-        for file_path in out.decode().split('\0'):
-            if file_path:
-                try:
-                    workbook = xlrd.open_workbook(file_path)
-                    for sheet in workbook.sheets():
-                        for row_idx in range(sheet.nrows):
-                            for col_idx in range(sheet.ncols):
-                                cell_value = sheet.cell(row_idx, col_idx).value
-                                if search_string in str(cell_value):
-                                    if list_only:
-                                        print(file_path)
-                                    else:
-                                        print(f"Found in {file_path} (Sheet: {sheet.name}, Row: {row_idx+1}, Col: {col_idx+1})")
-                except Exception as e:
-                    error_handler(str(e), ignore_errors, file_type)
 
+    if out:
+        file_paths = out.decode().split('\0')
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(process_xls, file_path, search_string): file_path for file_path in file_paths if file_path}
+            for future in as_completed(futures):
+                result = future.result()
+                if result:
+                    if isinstance(result, str) and "error" in result.lower():
+                        error_handler(result, ignore_errors, file_type, file_path)
+                    elif result:
+                        if list_only:
+                            print(result)
+                        else:
+                            print(f"Found in {result}")
+    
     error_handler(err, ignore_errors, file_type)
+
+def process_odp(file_path, search_string):
+    try:
+        with zipfile.ZipFile(file_path, 'r') as odp:
+            for entry in odp.namelist():
+                if entry.endswith('.xml'):
+                    with odp.open(entry) as xml_file:
+                        content = xml_file.read().decode('utf-8')
+                        if search_string in content:
+                            return file_path
+    except Exception as e:
+        return str(e)
+    return None
 
 def search_odp_files(search_string, file_type, search_path, verbose, list_only, ignore_errors):
     find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
@@ -156,24 +202,22 @@ def search_odp_files(search_string, file_type, search_path, verbose, list_only, 
 
     find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
     out, err = find_proc.communicate()
-    
-    if out:
-        for file_path in out.decode().split('\0'):
-            if file_path:
-                try:
-                    with zipfile.ZipFile(file_path, 'r') as odp:
-                        for entry in odp.namelist():
-                            if entry.endswith('.xml'):
-                                with odp.open(entry) as xml_file:
-                                    content = xml_file.read().decode('utf-8')
-                                    if search_string in content:
-                                        if list_only:
-                                            print(file_path)
-                                        else:
-                                            print(f"Found in {file_path} (Entry: {entry})")
-                except Exception as e:
-                    error_handler(str(e), ignore_errors, file_type)
 
+    if out:
+        file_paths = out.decode().split('\0')
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(process_odp, file_path, search_string): file_path for file_path in file_paths if file_path}
+            for future in as_completed(futures):
+                result = future.result()
+                if result:
+                    if isinstance(result, str) and "error" in result.lower():
+                        error_handler(result, ignore_errors, file_type, file_path)
+                    elif result:
+                        if list_only:
+                            print(result)
+                        else:
+                            print(f"Found in {result}")
+    
     error_handler(err, ignore_errors, file_type)
 
 if __name__ == "__main__":
@@ -227,7 +271,7 @@ if __name__ == "__main__":
     default_skip = [
         '.db',
         '.db-wal',
-        '.gpg'
+        '.gpg',
         '.gz',
         '.iso',
         '.ldb',        # https://learn.microsoft.com/de-de/office/troubleshoot/access/ldb-file-description
