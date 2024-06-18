@@ -165,7 +165,7 @@ def process_odp(file_path, search_string, verbose, list_only, ignore_errors, bin
             for entry in odp.namelist():
                 if entry.endswith('.xml'):
                     with odp.open(entry) as xml_file:
-                        content = xml_file.read().decode('utf-8')
+                        content = xml_file.read()decode('utf-8', errors='ignore')
                         if search_string in content:
                             if list_only:
                                 print(file_path)

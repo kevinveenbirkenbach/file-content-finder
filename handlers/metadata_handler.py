@@ -8,7 +8,8 @@ class MetadataHandler(BaseHandler):
 
     def process_metadata(self, file_path):
         try:
-            metadata = subprocess.check_output(['exiftool', file_path], universal_newlines=True)
+            metadata = subprocess.check_output(['exiftool', file_path], universal_newlines=False)
+            metadata = metadata.decode('utf-8', errors='ignore')
             if self.search_string in metadata:
                 if self.list_only:
                     print(file_path)
