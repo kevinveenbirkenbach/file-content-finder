@@ -10,22 +10,18 @@ def verbose_print(verbose, message):
     if verbose:
         print(message)
 
+def find_all_file_types(search_path):
+    file_types = set()
+    for root, _, files in os.walk(search_path):
+        for file in files:
+            ext = os.path.splitext(file)[1]
+            if ext:
+                file_types.add(f"*{ext}")
+    return list(file_types)
+
 def search_files(search_string, file_types, search_path, verbose):
     if not file_types:
-        file_types = [
-            '*.md', 
-            '*.txt', 
-            '*.csv', 
-            '*.log', 
-            '*.json', 
-            '*.xml', 
-            '*.html', 
-            '*.htm', 
-            '*.pdf', 
-            '*.jpeg', 
-            '*.jpg', 
-            '*.png'
-            ]
+        file_types = find_all_file_types(search_path)
 
     for file_type in file_types:
         if file_type == "*.pdf":
@@ -39,7 +35,8 @@ def verbose_output(verbose, find_cmd, grep_cmd, file_type):
     if verbose:
         print(f"Searching in {file_type} files...")
         print("Executing:", ' '.join(find_cmd))
-        print("Executing:", ' '.join(grep_cmd))
+        if grep_cmd:
+            print("Executing:", ' '.join(grep_cmd))
 
 def execute_search(verbose, find_cmd, grep_cmd, file_type):
     verbose_output(verbose, find_cmd, grep_cmd, file_type)
