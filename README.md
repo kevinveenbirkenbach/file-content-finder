@@ -59,6 +59,7 @@ xlrd
 PyPDF2
 mutagen
 docx
+pptx 
 ```
 
 To install the Python dependencies using `pip`, run:
