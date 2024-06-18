@@ -32,11 +32,9 @@ def search_files(search_string, file_types, search_path, verbose):
             search_text_files(search_string, file_type, search_path, verbose)
 
 def verbose_output(verbose, find_cmd, grep_cmd, file_type):
-    if verbose:
-        print(f"Searching in {file_type} files...")
-        print("Executing:", ' '.join(find_cmd))
-        if grep_cmd:
-            print("Executing:", ' '.join(grep_cmd))
+    verbose_print(verbose,f"Searching in {file_type} files...")
+    verbose_print(verbose,"Executing:", ' '.join(find_cmd))
+    verbose_print(verbose,"Executing:", ' '.join(grep_cmd))
 
 def execute_search(verbose, find_cmd, grep_cmd, file_type):
     verbose_output(verbose, find_cmd, grep_cmd, file_type)
@@ -68,9 +66,7 @@ def search_text_files(search_string, file_type, search_path, verbose):
 def search_images(search_string, file_type, search_path, verbose):
     print(f"Searching in {file_type} files with OCR...")
     find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
-
-    if verbose:
-        print("Executing:", ' '.join(find_cmd))
+    verbose_print(verbose,"Executing:", ' '.join(find_cmd))
 
     find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
     out, err = find_proc.communicate()
