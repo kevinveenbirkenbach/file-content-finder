@@ -1,11 +1,76 @@
+### README.md
+
 # File Content Finder
 
 This repository contains `search_files.py`, a script to search for a string in various file types, including PDF, text, and image files.
 
+## Features
+
+- Search for a string in multiple file types: PDF, text, images, Excel files, and more.
+- Support for case-insensitive search.
+- Option to list only the files containing the search string.
+- Verbose mode to print executed commands.
+- Error handling with options to ignore errors and continue searching.
+
+## Installation
+
+### Prerequisites
+
+Ensure you have the following installed on your system:
+
+1. **Python 3**: This script requires Python 3.
+2. **Package Managers**: `yay` and `pacman` for Arch Linux.
+3. **Pip**: Python package manager.
+
+### Install Dependencies
+
+Run the following commands to install necessary packages:
+
+```bash
+# Using yay for AUR packages
+yay -S python-pdf2image
+yay -S python-pypdf2
+
+# Using pacman for official repository packages
+sudo pacman -S python-pytesseract
+sudo pacman -S tesseract-data-eng
+sudo pacman -S pdfgrep
+sudo pacman -S python-xlrd
+
+# Using pip for Python packages
+pip install xlrd
+pip install pdf2image
+pip install pytesseract
+```
+
+### Clone the Repository
+
+```bash
+git clone https://github.com/kevinveenbirkenbach/file-content-finder.git
+cd file-content-finder
+```
+
+### Requirements File
+
+Here is the `requirements.txt` file for pip:
+
+```text
+pytesseract
+pdf2image
+xlrd
+PyPDF2
+```
+
+To install the Python dependencies using `pip`, run:
+
+```bash
+pip install -r requirements.txt
+```
+
 ## Usage
 
 ```bash
-python search_files.py [-h] [-t [TYPES [TYPES ...]]] [-p PATH] [-v] [-l] [-i] search_string
+python search_files.py [-h] [-t [TYPES [TYPES ...]]] [-p PATH] [-v] [-l] [-i] [-s [SKIP [SKIP ...]]] [-a] [-b] search_string
 ```
 
 ### Positional Arguments
@@ -19,6 +84,9 @@ python search_files.py [-h] [-t [TYPES [TYPES ...]]] [-p PATH] [-v] [-l] [-i] se
 - `-v`, `--verbose`: Print the executed commands.
 - `-l`, `--list`: Only list files containing the search string, without additional information.
 - `-i`, `--ignore`: Ignore errors and continue searching.
+- `-s`, `--skip`: Optional list of file extensions to skip (e.g., `.zip`, `.tar`, `.gz`).
+- `-a`, `--add`: Extend the default list of skipped files.
+- `-b`, `--binary-files`: Treat binary files as text for searching.
 
 ### Examples
 
@@ -52,6 +120,14 @@ Search for the string "example" and ignore any errors encountered:
 python search_files.py "example" -i
 ```
 
+### Setup
+
+To install the required Python packages, run:
+
+```bash
+pip install -r requirements.txt
+```
+
 ## Author
 
 - **Kevin Veen-Birkenbach**
@@ -65,3 +141,4 @@ This project is licensed under the GNU Affero General Public License, Version 3,
 ## AI Assistance
 
 This code was generated with the help of AI. For more details, refer to this [chat conversation with ChatGPT](https://chatgpt.com/share/7eae44ac-d4c0-4978-9e8e-bfa85dcc4b75).
+

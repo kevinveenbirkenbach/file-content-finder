@@ -1,3 +1,4 @@
 pytesseract
-pillow
 pdf2image
+xlrd
+PyPDF2
