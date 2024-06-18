@@ -8,6 +8,7 @@ from pdf2image import convert_from_path
 import xlrd
 import fnmatch
 import zipfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 def verbose_print(verbose, *messages):
     if verbose:
@@ -90,29 +91,37 @@ def search_text_files(search_string, file_type, search_path, verbose, list_only,
         grep_cmd.insert(3, '--binary-files=text')
     execute_search(verbose, find_cmd, grep_cmd, file_type, list_only, ignore_errors)
 
+def process_image(file_path, search_string):
+    text = ""
+    if file_path.endswith(".pdf"):
+        pages = convert_from_path(file_path)
+        for page in pages:
+            text += pytesseract.image_to_string(page)
+    else:
+        text += pytesseract.image_to_string(Image.open(file_path))
+    
+    if search_string in text:
+        return file_path
+    return None
+
 def search_images(search_string, file_type, search_path, verbose, list_only, ignore_errors):
     find_cmd = ['find', search_path, '-type', 'f', '-name', file_type, '-print0']
     verbose_print(verbose, "Executing:", ' '.join(find_cmd))
 
     find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
     out, err = find_proc.communicate()
-    
+
     if out:
-        for file_path in out.decode().split('\0'):
-            if file_path:
-                text = ""
-                if file_path.endswith(".pdf"):
-                    pages = convert_from_path(file_path)
-                    for page in pages:
-                        text += pytesseract.image_to_string(page)
-                else:
-                    text += pytesseract.image_to_string(Image.open(file_path))
-                
-                if search_string in text:
+        file_paths = out.decode().split('\0')
+        with ThreadPoolExecutor() as executor:
+            futures = {executor.submit(process_image, file_path, search_string): file_path for file_path in file_paths if file_path}
+            for future in as_completed(futures):
+                result = future.result()
+                if result:
                     if list_only:
-                        print(file_path)
+                        print(result)
                     else:
-                        print(f"Found in {file_path}")
+                        print(f"Found in {result}")
     error_handler(err, ignore_errors, file_type)
 
 def search_xls_files(search_string, file_type, search_path, verbose, list_only, ignore_errors):
@@ -218,8 +227,10 @@ if __name__ == "__main__":
     default_skip = [
         '.db',
         '.db-wal',
+        '.gpg'
         '.gz',
         '.iso',
+        '.ldb',        # https://learn.microsoft.com/de-de/office/troubleshoot/access/ldb-file-description
         '.log',
         '.mp4',
         '.old',
