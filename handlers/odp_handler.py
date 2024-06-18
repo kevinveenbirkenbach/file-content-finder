@@ -1,5 +1,6 @@
 import zipfile
 from .base_handler import BaseHandler
+from utils import SearchUtils
 
 class ODPHandler(BaseHandler):
     def search(self):
@@ -13,10 +14,6 @@ class ODPHandler(BaseHandler):
                     if entry.endswith('.xml'):
                         with odp.open(entry) as xml_file:
                             content = xml_file.read().decode('utf-8', errors='ignore')
-                            if self.search_string in content:
-                                if self.list_only:
-                                    print(file_path)
-                                else:
-                                    print(f"Found in {file_path}")
+                            SearchUtils.handle_search_result(self.search_string, content, file_path, self.list_only)
         except Exception as e:
             self.error_handler(str(e), file_path)

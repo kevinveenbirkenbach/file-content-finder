@@ -1,5 +1,6 @@
 import docx
 from .base_handler import BaseHandler
+from utils import SearchUtils
 
 class DocHandler(BaseHandler):
     def search(self):
@@ -12,10 +13,6 @@ class DocHandler(BaseHandler):
             text = ""
             for para in doc.paragraphs:
                 text += para.text
-            if self.search_string in text:
-                if self.list_only:
-                    print(file_path)
-                else:
-                    print(f"Found in {file_path}")
+            SearchUtils.handle_search_result(self.search_string, text, file_path, self.list_only)
         except Exception as e:
             self.error_handler(str(e), file_path)
