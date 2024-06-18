@@ -10,13 +10,7 @@ class ImageHandler(BaseHandler):
 
     def process_image(self, file_path):
         try:
-            text = ""
-            if file_path.endswith(".pdf"):
-                pages = convert_from_path(file_path)
-                for page in pages:
-                    text += pytesseract.image_to_string(page)
-            else:
-                text += pytesseract.image_to_string(Image.open(file_path))
+            text = pytesseract.image_to_string(Image.open(file_path))
             if self.search_string in text:
                 if self.list_only:
                     print(file_path)
