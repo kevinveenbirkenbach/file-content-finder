@@ -13,8 +13,8 @@ def error_handler(err, ignore_errors, file_path, verbose):
         execution_exception = SearchExecutionError(err, file_path)
         if not ignore_errors:
             raise execution_exception
-        if not verbose:
-            print(f"Ignoring the following error: {execution_exception}")
+        else:
+            verbose_print(f"Ignoring the following error: {execution_exception}")
 
 def process_files_in_parallel(find_cmd, process_func, search_string, verbose,  ignore_errors, binary_files=None):
     find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
@@ -31,8 +31,8 @@ def process_files_in_parallel(find_cmd, process_func, search_string, verbose,  i
                     if result:
                         if isinstance(result, str) and "error" in result.lower():
                             error_handler(result, ignore_errors, file_path, verbose)
-                        elif result:
-                            print(result)
+                        else:
+                            verbose_print(result)
             except KeyboardInterrupt:
                 for future in futures:
                     future.cancel()

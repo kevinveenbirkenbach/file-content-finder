@@ -32,5 +32,5 @@ class PDFHandler(GrepHandler):
                 for page in reader.pages:
                     file_content += page.extract_text()
         except Exception as e:
-            print(f"Error reading PDF file {file_path}: {e}")
+            self.error_handler(str(e), file_path)
         return file_content

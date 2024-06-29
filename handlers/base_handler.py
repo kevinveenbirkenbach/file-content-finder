@@ -22,7 +22,7 @@ class BaseHandler:
     def error_handler(self, err, file_path):
         if err:
             if self.ignore_errors:
-                print(f"Ignoring error: {err}")
+                self.verbose_print(f"Ignoring error: {err}")
             else:
                 raise Exception(f"Error occurred during search execution in {file_path}: {err}")
 
