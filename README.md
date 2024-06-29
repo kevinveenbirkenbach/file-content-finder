@@ -26,19 +26,10 @@ Run the following commands to install necessary packages:
 
 ```bash
 # Using yay for AUR packages
-yay -S python-pdf2image
-yay -S python-pypdf2
+yay -S python-pdf2image python-pypdf2 python-docx python-pptx
 
 # Using pacman for official repository packages
-sudo pacman -S python-pytesseract
-sudo pacman -S tesseract-data-eng
-sudo pacman -S pdfgrep
-sudo pacman -S python-xlrd
-
-# Using pip for Python packages
-pip install xlrd
-pip install pdf2image
-pip install pytesseract
+sudo pacman -S python-pytesseract tesseract-data-eng pdfgrep python-xlrd
 ```
 
 ### Clone the Repository
