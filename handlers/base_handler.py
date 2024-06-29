@@ -27,16 +27,6 @@ class BaseHandler:
             else:
                 raise Exception(f"Error occurred during search execution in {file_path}: {err}")
 
-    def execute_search(self, cmd, file_path):
-        self.verbose_print("Executing:", ' '.join(cmd))
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out, err = proc.communicate()
-        if out:
-            return out.decode(errors='ignore')
-        if err:
-            self.error_handler(err.decode(errors='ignore'), file_path)
-        return ""
-
     def process_files_in_parallel(self, find_cmd, process_func):
         proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
         out, _ = proc.communicate()

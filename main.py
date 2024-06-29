@@ -1,5 +1,5 @@
-# main.py
 import argparse
+import json
 from searcher import Searcher
 
 if __name__ == "__main__":
@@ -58,6 +58,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Perform fixed-string search (disables regex)."
     )
+    parser.add_argument(
+        "-j", "--json",
+        action="store_true",
+        help="Output results in JSON format."
+    )
 
     args = parser.parse_args()
 
@@ -85,5 +90,8 @@ if __name__ == "__main__":
     searcher = Searcher(args.search_strings, args.types, args.paths, args.verbose, args.list, args.ignore, skip_patterns, args.binary_files, args.case_sensitive, args.fixed)
     results = searcher.search_files()
 
-    for result in results:
-        print(result)
+    if args.json:
+        print(json.dumps([result.to_dict() for result in results], indent=4))
+    else:
+        for result in results:
+            print(result)

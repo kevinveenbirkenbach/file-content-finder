@@ -16,30 +16,6 @@ def error_handler(list_only, err, ignore_errors, file_path):
         if not ignore_errors:
             raise execution_exception
 
-def execute_search(cmd, verbose, list_only, ignore_errors, file_path):
-    verbose_print(verbose, "Executing:", ' '.join(cmd))
-
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = proc.communicate()
-
-    if out:
-        try:
-            output = out.decode(errors='ignore')
-        except UnicodeDecodeError as e:
-            error_handler(list_only, str(e), ignore_errors, cmd[-1])
-            return  # Ensure the function exits if error_handler is called
-
-        if list_only:
-            results = output.strip().split('\n')
-            files_found = set(result.split(':')[0] for result in results)
-            for file in files_found:
-                print(file)
-        else:
-            print(output)
-
-    if err:
-        error_handler(list_only, err.decode(errors='ignore'), ignore_errors, cmd[-1])
-
 def process_files_in_parallel(find_cmd, process_func, search_string, verbose, list_only, ignore_errors, binary_files=None):
     find_proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
     out, err = find_proc.communicate()

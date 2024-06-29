@@ -1,4 +1,5 @@
-# models.py
+import json
+
 class FileResult:
     def __init__(self, path, file_type, content):
         self.path = path
@@ -12,3 +13,9 @@ class FileResult:
         else:
             return f"FileResult(path={self.path}, file_type={self.file_type})"
 
+    def to_dict(self):
+        return {
+            "path": self.path,
+            "file_type": self.file_type,
+            "content": self.content
+        }

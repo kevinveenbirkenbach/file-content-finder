@@ -1,8 +1,7 @@
-# text_handler.py
-from .base_handler import BaseHandler
+from .pdf_handler import GrepHandler
 from models import FileResult
 
-class TextHandler(BaseHandler):
+class TextHandler(GrepHandler):
     def search(self):
         find_cmd = ['find', self.search_path, '-type', 'f', '-iname', self.file_type, '-print0']
         return self.process_files_in_parallel(find_cmd, self.process_text_file)
@@ -18,7 +17,8 @@ class TextHandler(BaseHandler):
             grep_cmd.extend([search_string, file_path])
             if self.binary_files:
                 grep_cmd.insert(2, '--binary-files=text')
-            output = self.execute_search(grep_cmd, file_path)
-            if output:
-                results.append(FileResult(file_path, self.file_type, output))
+            if self.execute_search(grep_cmd, file_path):
+                with open(file_path, 'r', errors='ignore') as file:
+                    file_content = file.read()
+                results.append(FileResult(file_path, self.file_type, file_content))
         return results

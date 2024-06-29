@@ -1,8 +1,8 @@
-# pdf_handler.py
-from .base_handler import BaseHandler
+import PyPDF2
+from .grep_handler import GrepHandler
 from models import FileResult
 
-class PDFHandler(BaseHandler):
+class PDFHandler(GrepHandler):
     def __init__(self, search_strings, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None, case_sensitive=None, fixed=False):
         super().__init__(search_strings, file_type, search_path, verbose, list_only, True, binary_files, case_sensitive, fixed)
 
@@ -19,7 +19,18 @@ class PDFHandler(BaseHandler):
             if not self.case_sensitive:
                 grep_cmd.append('-i')
             grep_cmd.extend([search_string, file_path])
-            output = self.execute_search(grep_cmd, file_path)
-            if output:
-                results.append(FileResult(file_path, self.file_type, output))
+            if self.execute_search(grep_cmd, file_path):
+                file_content = self.read_pdf_content(file_path)
+                results.append(FileResult(file_path, self.file_type, file_content))
         return results
+
+    def read_pdf_content(self, file_path):
+        file_content = ""
+        try:
+            with open(file_path, 'rb') as file:
+                reader = PyPDF2.PdfReader(file)
+                for page in reader.pages:
+                    file_content += page.extract_text()
+        except Exception as e:
+            print(f"Error reading PDF file {file_path}: {e}")
+        return file_content
