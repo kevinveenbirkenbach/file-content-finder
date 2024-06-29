@@ -12,5 +12,7 @@ class CompositeHandler(BaseHandler):
         ]
 
     def search(self):
+        results = []
         for handler in self.handlers:
-            handler.search()
+            results.extend(handler.search())
+        return results

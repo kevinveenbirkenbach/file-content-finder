@@ -1,14 +1,15 @@
 # xls_handler.py
 import xlrd
 from .base_handler import BaseHandler
-from utils import SearchUtils
+from models import FileResult
 
 class XLSHandler(BaseHandler):
     def search(self):
         find_cmd = ['find', self.search_path, '-type', 'f', '-iname', self.file_type, '-print0']
-        self.process_files_in_parallel(find_cmd, self.process_xls)
+        return self.process_files_in_parallel(find_cmd, self.process_xls)
 
     def process_xls(self, file_path):
+        results = []
         try:
             workbook = xlrd.open_workbook(file_path)
             for sheet in workbook.sheets():
@@ -16,6 +17,8 @@ class XLSHandler(BaseHandler):
                     for col_idx in range(sheet.ncols):
                         cell_value = sheet.cell(row_idx, col_idx).value
                         for search_string in self.search_strings:
-                            SearchUtils.handle_search_result(search_string, str(cell_value), file_path, self.list_only)
+                            if search_string in str(cell_value):
+                                results.append(FileResult(file_path, self.file_type, str(cell_value)))
         except Exception as e:
             self.error_handler(str(e), file_path)
+        return results

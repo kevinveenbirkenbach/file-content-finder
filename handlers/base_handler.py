@@ -2,6 +2,7 @@
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import partial
+from models import FileResult
 
 class BaseHandler:
     def __init__(self, search_strings, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None, case_sensitive=False, fixed=False):
@@ -31,19 +32,15 @@ class BaseHandler:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = proc.communicate()
         if out:
-            output = out.decode(errors='ignore')
-            if self.list_only:
-                files_found = {line.split(':')[0] for line in output.strip().split('\n')}
-                for file in files_found:
-                    print(file)
-            else:
-                print(output)
+            return out.decode(errors='ignore')
         if err:
             self.error_handler(err.decode(errors='ignore'), file_path)
+        return ""
 
     def process_files_in_parallel(self, find_cmd, process_func):
         proc = subprocess.Popen(find_cmd, stdout=subprocess.PIPE)
         out, _ = proc.communicate()
+        results = []
         if out:
             file_paths = out.decode().split('\0')
             self.verbose_print(f"Processing {len(file_paths)} files...")
@@ -52,12 +49,13 @@ class BaseHandler:
                 try:
                     for future in as_completed(futures):
                         result = future.result()
-                        if result and not self.list_only:
-                            print(f"Found in {result}")
+                        if result:
+                            results.extend(result)
                 except KeyboardInterrupt:
                     for future in futures:
                         future.cancel()
                     raise
+        return results
 
     def search(self):
         raise NotImplementedError("Subclasses must implement this method.")

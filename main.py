@@ -1,3 +1,4 @@
+# main.py
 import argparse
 from searcher import Searcher
 
@@ -71,7 +72,7 @@ if __name__ == "__main__":
         '.log',
         '.old',
         '.pod',
-        '.tar', 
+        '.tar',
         '.zip',
         '.xcf',
     ]
@@ -82,4 +83,7 @@ if __name__ == "__main__":
         skip_patterns = [pattern.lower() for pattern in args.skip]
 
     searcher = Searcher(args.search_strings, args.types, args.paths, args.verbose, args.list, args.ignore, skip_patterns, args.binary_files, args.case_sensitive, args.fixed)
-    searcher.search_files()
+    results = searcher.search_files()
+
+    for result in results:
+        print(result)

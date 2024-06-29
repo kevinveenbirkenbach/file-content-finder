@@ -1,13 +1,15 @@
 # sqlite_handler.py
 import sqlite3
 from .base_handler import BaseHandler
+from models import FileResult
 
 class SQLiteHandler(BaseHandler):
     def search(self):
         find_cmd = ['find', self.search_path, '-type', 'f', '-iname', self.file_type, '-print0']
-        self.process_files_in_parallel(find_cmd, self.process_sqlite)
+        return self.process_files_in_parallel(find_cmd, self.process_sqlite)
 
     def process_sqlite(self, file_path):
+        results = []
         try:
             conn = sqlite3.connect(file_path)
             cursor = conn.cursor()
@@ -23,10 +25,9 @@ class SQLiteHandler(BaseHandler):
                         cursor.execute(f"SELECT * FROM {table_name} WHERE {column} LIKE ?", ('%' + search_string + '%',))
                         rows = cursor.fetchall()
                         if rows:
-                            if self.list_only:
-                                print(file_path)
-                            else:
-                                print(f"Found in {file_path} in table {table_name}, column {column}")
+                            content = f"Found in table {table_name}, column {column}"
+                            results.append(FileResult(file_path, self.file_type, content))
             conn.close()
         except Exception as e:
             self.error_handler(str(e), file_path)
+        return results

@@ -2,23 +2,25 @@
 import zipfile
 from xml.etree import ElementTree as ET
 from .base_handler import BaseHandler
-from utils import SearchUtils
+from models import FileResult
 
 class ODTHandler(BaseHandler):
     def search(self):
         find_cmd = ['find', self.search_path, '-type', 'f', '-iname', self.file_type, '-print0']
-        self.process_files_in_parallel(find_cmd, self.process_odt)
+        return self.process_files_in_parallel(find_cmd, self.process_odt)
 
     def process_odt(self, file_path):
+        results = []
         if not self.is_zipfile(file_path):
             try:
                 with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                     content = f.read()
                     for search_string in self.search_strings:
-                        SearchUtils.handle_search_result(search_string, content, file_path, self.list_only)
+                        if search_string in content:
+                            results.append(FileResult(file_path, self.file_type, content))
             except Exception as e:
                 self.error_handler(str(e), file_path)
-            return
+            return results
 
         try:
             with zipfile.ZipFile(file_path, 'r') as odt:
@@ -28,9 +30,11 @@ class ODTHandler(BaseHandler):
                             content = xml_file.read().decode('utf-8', errors='ignore')
                             text = self.extract_text_from_odt(content)
                             for search_string in self.search_strings:
-                                SearchUtils.handle_search_result(search_string, text, file_path, self.list_only)
+                                if search_string in text:
+                                    results.append(FileResult(file_path, self.file_type, text))
         except Exception as e:
             self.error_handler(str(e), file_path)
+        return results
 
     def is_zipfile(self, file_path):
         try:

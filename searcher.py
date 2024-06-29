@@ -10,7 +10,8 @@ from handlers.odp_handler import ODPHandler
 from handlers.metadata_handler import MetadataHandler
 from handlers.composite_handler import CompositeHandler
 from handlers.pptx_handler import PPTXHandler
-from handlers.odt_handler import ODTHandler 
+from handlers.odt_handler import ODTHandler
+from models import FileResult
 
 class Searcher:
     def __init__(self, search_strings, file_types, search_paths, verbose, list_only, ignore_errors, skip_patterns, binary_files, case_sensitive, fixed):
@@ -25,11 +26,11 @@ class Searcher:
         self.case_sensitive = case_sensitive
         self.fixed = fixed
 
-    def setSearchPaths(self,search_paths):
+    def setSearchPaths(self, search_paths):
         self.search_paths = []
         for search_path in search_paths:
             if not search_path.endswith('/'):
-                self.search_paths.append(search_path+'/')
+                self.search_paths.append(search_path + '/')
             else:
                 self.search_paths.append(search_path)
 
@@ -47,13 +48,15 @@ class Searcher:
         return list(file_types)
 
     def search_files(self):
+        results = []
         if not self.file_types:
             self.file_types = set()
             for path in self.search_paths:
                 self.file_types.update(self.find_all_file_types(path))
             self.file_types = list(self.file_types)
-        
+
         dispatch = {
+            "*.doc": DocHandler,
             "*.pdf": PDFHandler,
             "*.jpeg": CompositeHandler,
             "*.jpg": CompositeHandler,
@@ -61,7 +64,6 @@ class Searcher:
             "*.xls": XLSHandler,
             "*.odp": ODPHandler,
             "*.odt": ODTHandler,
-            #"*.doc": DocHandler,
             "*.pptx": PPTXHandler,
             "*.sqlite": SQLiteHandler,
             "*.mp3": MetadataHandler,
@@ -79,4 +81,5 @@ class Searcher:
                 self.verbose_print(f"Searching in {file_type} files in {path} with normalized type {normalized_file_type}...")
                 handler_class = dispatch.get(normalized_file_type, TextHandler)
                 handler = handler_class(self.search_strings, normalized_file_type, path, self.verbose, self.list_only, self.ignore_errors, self.binary_files, self.case_sensitive, self.fixed)
-                handler.search()
+                results.extend(handler.search())
+        return results
