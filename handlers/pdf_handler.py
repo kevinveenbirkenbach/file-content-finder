@@ -3,8 +3,8 @@ from .grep_handler import GrepHandler
 from models import FileResult
 
 class PDFHandler(GrepHandler):
-    def __init__(self, search_strings, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None, case_sensitive=None, fixed=False):
-        super().__init__(search_strings, file_type, search_path, verbose, list_only, True, binary_files, case_sensitive, fixed)
+    def __init__(self, search_strings, file_type, search_path, verbose,  ignore_errors, binary_files=None, case_sensitive=None, fixed=False):
+        super().__init__(search_strings, file_type, search_path, verbose,  True, binary_files, case_sensitive, fixed)
 
     def search(self):
         find_cmd = ['find', self.search_path, '-type', 'f', '-iname', self.file_type, '-print0']

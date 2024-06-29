@@ -5,12 +5,11 @@ from functools import partial
 from models import FileResult
 
 class BaseHandler:
-    def __init__(self, search_strings, file_type, search_path, verbose, list_only, ignore_errors, binary_files=None, case_sensitive=False, fixed=False):
+    def __init__(self, search_strings, file_type, search_path, verbose,  ignore_errors, binary_files=None, case_sensitive=False, fixed=False):
         self.search_strings = search_strings
         self.file_type = file_type
         self.search_path = search_path
         self.verbose = verbose
-        self.list_only = list_only
         self.ignore_errors = ignore_errors
         self.binary_files = binary_files
         self.case_sensitive = case_sensitive

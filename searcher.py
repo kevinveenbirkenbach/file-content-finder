@@ -14,12 +14,11 @@ from handlers.odt_handler import ODTHandler
 from models import FileResult
 
 class Searcher:
-    def __init__(self, search_strings, file_types, search_paths, verbose, list_only, ignore_errors, skip_patterns, binary_files, case_sensitive, fixed):
+    def __init__(self, search_strings, file_types, search_paths, verbose,  ignore_errors, skip_patterns, binary_files, case_sensitive, fixed):
         self.search_strings = search_strings
         self.file_types = file_types
         self.setSearchPaths(search_paths)
         self.verbose = verbose
-        self.list_only = list_only
         self.ignore_errors = ignore_errors
         self.skip_patterns = skip_patterns
         self.binary_files = binary_files
@@ -80,6 +79,6 @@ class Searcher:
             for path in self.search_paths:
                 self.verbose_print(f"Searching in {file_type} files in {path} with normalized type {normalized_file_type}...")
                 handler_class = dispatch.get(normalized_file_type, TextHandler)
-                handler = handler_class(self.search_strings, normalized_file_type, path, self.verbose, self.list_only, self.ignore_errors, self.binary_files, self.case_sensitive, self.fixed)
+                handler = handler_class(self.search_strings, normalized_file_type, path, self.verbose, self.ignore_errors, self.binary_files, self.case_sensitive, self.fixed)
                 results.extend(handler.search())
         return results

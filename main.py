@@ -23,11 +23,6 @@ if __name__ == "__main__":
         help="Print the executed commands."
     )
     parser.add_argument(
-        "-l", "--list",
-        action="store_true",
-        help="Only list files containing the search string, without additional information."
-    )
-    parser.add_argument(
         "-i", "--ignore",
         action="store_true",
         help="Ignore errors and continue searching."
@@ -87,7 +82,7 @@ if __name__ == "__main__":
     else:
         skip_patterns = [pattern.lower() for pattern in args.skip]
 
-    searcher = Searcher(args.search_strings, args.types, args.paths, args.verbose, args.list, args.ignore, skip_patterns, args.binary_files, args.case_sensitive, args.fixed)
+    searcher = Searcher(args.search_strings, args.types, args.paths, args.verbose, args.ignore, skip_patterns, args.binary_files, args.case_sensitive, args.fixed)
     results = searcher.search_files()
 
     if args.json:
