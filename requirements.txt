@@ -1,0 +1,7 @@
+pytesseract
+pdf2image
+xlrd
+PyPDF2
+mutagen
+docx
+pptx 
